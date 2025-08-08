@@ -80,7 +80,7 @@ def create_app(test_config=None):
             collection_obj = None
 
         # NEW: Calculate the total purchase price in SGD
-        total_purchase_price_sgd = sum(card.purchase_price_sgd for card in cards)
+        total_purchase_price_sgd = sum(card.purchase_price_sgd * card.quantity for card in cards)
 
         card_names = sorted(list(set(card.name for card in cards)))
         card_values = {name: sum(c.purchase_price_sgd for c in cards if c.name == name) for name in card_names}

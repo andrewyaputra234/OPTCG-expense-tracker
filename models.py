@@ -26,8 +26,6 @@ class Card(db.Model):
     image_url = db.Column(db.String(500))
     purchase_date = db.Column(db.Date, default=date.today)
 
-    expenses = db.relationship('Expense', backref='card', lazy=True)
-
     # New foreign key to link to a Collection
     collection_id = db.Column(db.Integer, db.ForeignKey('collection.id'), nullable=True)
 

@@ -58,8 +58,8 @@
                             <th scope="col">Rarity</th>
                             <th scope="col">Color</th>
                             <th scope="col">Quantity</th>
-                            <th scope="col">Purchase Price (Original)</th>
-                            <th scope="col">Purchase Price (SGD)</th>
+                            <th scope="col">Total Purchase Price (Original)</th>
+                            <th scope="col">Total Purchase Price (SGD)</th>
                             <th scope="col">Purchase Date</th>
                             <th scope="col">Actions</th>
                         </tr>
@@ -73,8 +73,8 @@
                             <td>{{ card.rarity }}</td>
                             <td>{{ card.color }}</td>
                             <td>{{ card.quantity }}</td>
-                            <td>{{ card.purchase_price_original|round(2) }} {{ card.original_currency }}</td>
-                            <td>${{ card.purchase_price_sgd|round(2) }}</td>
+                            <td>{{ (card.purchase_price_original * card.quantity)|round(2) }} {{ card.original_currency }}</td>
+                            <td>${{ (card.purchase_price_sgd * card.quantity)|round(2) }}</td>
                             <td>{{ card.purchase_date.strftime('%Y-%m-%d') }}</td>
                             <td>
                                 <a href="{{ url_for('edit_card', card_id=card.id) }}" class="btn btn-sm btn-warning">Edit</a>
@@ -89,7 +89,13 @@
             </div>
             
             <div class="text-end mt-4 p-3 border-top border-2">
-                <h4 class="mb-0">Total Price: ${{ total_purchase_price_sgd|round(2) }} SGD</h4>
+                {% if total_purchase_price_original %}
+                    <h5 class="mb-2">Total Purchase Price by Currency:</h5>
+                    {% for currency, total_price in total_purchase_price_original.items() %}
+                        <p class="mb-0">{{ total_price|round(2) }} {{ currency }}</p>
+                    {% endfor %}
+                {% endif %}
+                <h4 class="mb-0">Total Purchase Price: ${{ total_purchase_price_sgd|round(2) }} SGD</h4>
             </div>
 
             {% else %}
