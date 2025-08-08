@@ -76,10 +76,6 @@
             <input type="number" class="form-control" id="purchase_price_sgd" name="purchase_price_sgd" step="0.01" value="{{ card.purchase_price_sgd }}">
         </div>
         <div class="mb-3">
-            <label for="current_value_sgd" class="form-label">Current Value (SGD)</label>
-            <input type="number" class="form-control" id="current_value_sgd" name="current_value_sgd" step="0.01" value="{{ card.current_value_sgd }}">
-        </div>
-        <div class="mb-3">
             <label for="purchase_date" class="form-label">Purchase Date <span class="text-danger">*</span></label>
             <input type="date" class="form-control" id="purchase_date" name="purchase_date" value="{{ card.purchase_date.strftime('%Y-%m-%d') }}" required>
         </div>

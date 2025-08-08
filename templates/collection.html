@@ -60,7 +60,6 @@
                             <th scope="col">Quantity</th>
                             <th scope="col">Purchase Price (Original)</th>
                             <th scope="col">Purchase Price (SGD)</th>
-                            <th scope="col">Current Value (SGD)</th>
                             <th scope="col">Purchase Date</th>
                             <th scope="col">Actions</th>
                         </tr>
@@ -76,7 +75,6 @@
                             <td>{{ card.quantity }}</td>
                             <td>{{ card.purchase_price_original|round(2) }} {{ card.original_currency }}</td>
                             <td>${{ card.purchase_price_sgd|round(2) }}</td>
-                            <td>${{ card.current_value_sgd|round(2) }}</td>
                             <td>{{ card.purchase_date.strftime('%Y-%m-%d') }}</td>
                             <td>
                                 <a href="{{ url_for('edit_card', card_id=card.id) }}" class="btn btn-sm btn-warning">Edit</a>

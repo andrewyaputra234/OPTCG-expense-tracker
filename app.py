@@ -140,17 +140,17 @@ def create_app(test_config=None):
     def delete_collection(collection_id):
         collection = Collection.query.get_or_404(collection_id)
         try:
-            # Before deleting, disassociate any cards from this collection
+            # Permanently delete all cards associated with this collection
             for card in collection.cards:
-                card.collection_id = None
+                db.session.delete(card)
+                
             db.session.delete(collection)
             db.session.commit()
-            flash('Collection deleted successfully!', 'success')
+            flash('Collection and all associated cards deleted successfully!', 'success')
         except Exception as e:
             db.session.rollback()
             flash(f'An error occurred: {e}', 'danger')
         return redirect(url_for('collections_list'))
-
     # --- END NEW COLLECTION ROUTES ---
 
     # --- MODIFIED `add_card` ROUTE ---

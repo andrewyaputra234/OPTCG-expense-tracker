@@ -1,16 +1,35 @@
 {% extends "base.html" %}
 
+{% block title %}Edit Collection{% endblock %}
+
 {% block content %}
-<h1 class="mb-4">Edit Collection: {{ collection.name }}</h1>
-<form action="{{ url_for('edit_collection', collection_id=collection.id) }}" method="POST">
-    <div class="mb-3">
-        <label for="name" class="form-label">Collection Name</label>
-        <input type="text" class="form-control" id="name" name="name" value="{{ collection.name }}" required>
-    </div>
-    <div class="mb-3">
-        <label for="description" class="form-label">Description</label>
-        <textarea class="form-control" id="description" name="description" rows="3">{{ collection.description }}</textarea>
-    </div>
-    <button type="submit" class="btn btn-primary">Update Collection</button>
-</form>
+<div class="container mt-4">
+    <h1 class="mb-4">Edit Collection: {{ collection.name }}</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="alert-container">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category == 'error' and 'danger' or category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('edit_collection', collection_id=collection.id) }}" method="POST">
+        <div class="mb-3">
+            <label for="name" class="form-label">Collection Name</label>
+            <input type="text" class="form-control" id="name" name="name" value="{{ collection.name }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="3">{{ collection.description or '' }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Update Collection</button>
+        <a href="{{ url_for('collections_list') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
 {% endblock %}
