@@ -81,18 +81,42 @@ def create_app(test_config=None):
         today_date = date.today().isoformat()
         return render_template('add_card.html', today_date=today_date)
 
+    # --- START OF MODIFIED ROUTE ---
     @app.route('/add_card_with_ai', methods=['GET', 'POST'])
     def add_card_with_ai():
-        from .chatbot_service import get_card_details_from_ai
+        # This will now import the new multimodal service
+        from .chatbot_service import get_card_details_from_ai_multimodal, generate_ai_confirmation_message
         
         if request.method == 'POST':
             user_description = request.form.get('card_description')
-            if not user_description:
-                flash("Please provide a card description.", "error")
+            card_image = request.files.get('card_image')
+            
+            # Check that at least one form of input was provided
+            if not user_description and (not card_image or card_image.filename == ''):
+                flash("Please provide a card description or upload an image.", "error")
                 return redirect(url_for('add_card_with_ai'))
 
-            card_data = get_card_details_from_ai(user_description)
+            image_path = None
+            if card_image and card_image.filename != '':
+                try:
+                    # Create a temporary folder for uploads if it doesn't exist
+                    upload_folder = os.path.join(app.instance_path, 'uploads')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    
+                    # Save the uploaded file temporarily
+                    image_path = os.path.join(upload_folder, card_image.filename)
+                    card_image.save(image_path)
+                except Exception as e:
+                    flash(f"Error saving image: {e}", "error")
+                    return redirect(url_for('add_card_with_ai'))
+
+            # Call the new multimodal chatbot service
+            card_data = get_card_details_from_ai_multimodal(user_description, image_path)
             
+            # Clean up the temporary image file
+            if image_path and os.path.exists(image_path):
+                os.remove(image_path)
+
             if 'error' in card_data:
                 flash(f"Error from AI: {card_data['error']}", "error")
                 return redirect(url_for('add_card_with_ai'))
@@ -110,7 +134,11 @@ def create_app(test_config=None):
                 db.session.add(new_card)
                 db.session.commit()
                 
-                flash('Card added successfully with AI!', 'success')
+                # --- NEW CODE: Get AI confirmation message and flash it ---
+                confirmation_message = generate_ai_confirmation_message(card_data)
+                flash(confirmation_message, 'success')
+                # --- END NEW CODE ---
+                
                 return redirect(url_for('collection'))
 
             except Exception as e:
@@ -119,6 +147,7 @@ def create_app(test_config=None):
                 return redirect(url_for('add_card_with_ai'))
 
         return render_template('add_card_with_ai.html')
+    # --- END OF MODIFIED ROUTE ---
 
     @app.route('/edit_card/<int:card_id>', methods=['GET', 'POST'])
     def edit_card(card_id):
