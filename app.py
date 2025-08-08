@@ -79,6 +79,9 @@ def create_app(test_config=None):
             cards = Card.query.filter_by(collection_id=None).order_by(Card.name).all()
             collection_obj = None
 
+        # NEW: Calculate the total purchase price in SGD
+        total_purchase_price_sgd = sum(card.purchase_price_sgd for card in cards)
+
         card_names = sorted(list(set(card.name for card in cards)))
         card_values = {name: sum(c.purchase_price_sgd for c in cards if c.name == name) for name in card_names}
 
@@ -91,7 +94,8 @@ def create_app(test_config=None):
             collection=collection_obj,
             card_names=card_names,
             card_values=card_values,
-            all_collections=all_collections
+            all_collections=all_collections,
+            total_purchase_price_sgd=total_purchase_price_sgd # NEW: Pass the total to the template
         )
 
     # --- NEW COLLECTION ROUTES ---

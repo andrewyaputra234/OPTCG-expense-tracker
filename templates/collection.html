@@ -87,6 +87,11 @@
                     </tbody>
                 </table>
             </div>
+            
+            <div class="text-end mt-4 p-3 border-top border-2">
+                <h4 class="mb-0">Total Price: ${{ total_purchase_price_sgd|round(2) }} SGD</h4>
+            </div>
+
             {% else %}
             <div class="alert alert-info text-center" role="alert">
                 {% if collection %}
