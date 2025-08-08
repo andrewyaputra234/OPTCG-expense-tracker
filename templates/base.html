@@ -13,15 +13,14 @@
 <body>
     <nav>
         <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('collections_list') }}">Collections</a>
         <a href="{{ url_for('collection') }}">My Collection</a>
         <a href="{{ url_for('add_card') }}">Add Card (Manual)</a>
-        {# ADD THIS NEW LINE #}
         <a href="{{ url_for('add_card_with_ai') }}">Add Card (with AI)</a>
         <a href="{{ url_for('expenses') }}">Expenses</a>
         <a class="nav-link" href="{{ url_for('wishlist') }}">Wishlist</a>
     </nav>
     <main>
-        {# Flash Messages Display - THIS IS WHERE THE BLOCK YOU PASTED GOES #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <ul class="flashes">
@@ -31,7 +30,6 @@
                 </ul>
             {% endif %}
         {% endwith %}
-        {# Main Content Block - This is where index.html's content will appear #}
         {% block content %}{% endblock %}
     </main>
     <footer>

@@ -10,7 +10,7 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# Your original text-only function
+# Your original text-only function (updated)
 def get_card_details_from_ai(user_description: str) -> dict:
     if not user_description or not user_description.strip():
         return {"error": "No description provided."}
@@ -21,13 +21,11 @@ def get_card_details_from_ai(user_description: str) -> dict:
     system_prompt = (
         "You are a helpful assistant that extracts One Piece Card Game (OPTCG) card details "
         "from user descriptions. Your goal is to provide a JSON object with the following fields: "
-        "'name', 'set_name', 'card_number', 'rarity', 'color', 'quantity', 'purchase_price_sgd', "
+        "'name', 'set_name', 'card_number', 'rarity', 'color', 'quantity', "
+        "'purchase_price_original', 'original_currency', "
         "'purchase_date' (YYYY-MM-DD), and 'image_url'. "
-        "If a field is not explicitly mentioned or inferable from the description, use sensible defaults "
-        "(e.g., quantity: 1, purchase_date: today's date, price: 0.0, empty string for others). "
-        "For 'card_number', try to infer the set (e.g., 'OP01', 'ST10'). "
-        "If a type like 'SP', 'AA' (Alternative Art), or 'Manga Art' is mentioned, include it in the 'rarity' field "
-        "or infer the 'card_number' if possible (e.g. Manga Art often have specific card numbers). "
+        "For 'original_currency', identify the currency symbol (e.g., '¥', '$', 'SGD') and use its 3-letter code (e.g., 'JPY', 'USD', 'SGD'). If no currency is specified, assume it's 'SGD'. "
+        "If a field is not explicitly mentioned, use sensible defaults (e.g., quantity: 1, price: 0.0, date: today's date, empty string for others). "
         "Ensure the output is valid JSON only."
     )
 
@@ -52,7 +50,8 @@ def get_card_details_from_ai(user_description: str) -> dict:
         card_data.setdefault('rarity', '')
         card_data.setdefault('color', '')
         card_data.setdefault('quantity', 1)
-        card_data.setdefault('purchase_price_sgd', 0.0)
+        card_data.setdefault('purchase_price_original', 0.0)
+        card_data.setdefault('original_currency', 'SGD')
         card_data.setdefault('purchase_date', date.today().isoformat())
         card_data.setdefault('image_url', '')
 
@@ -67,7 +66,7 @@ def get_card_details_from_ai(user_description: str) -> dict:
     except Exception as e:
         return {"error": f"An unexpected error occurred: {e}"}
 
-# --- START OF NEW MULTIMODAL FUNCTION ---
+# --- START OF NEW MULTIMODAL FUNCTION (updated) ---
 def get_card_details_from_ai_multimodal(user_description: str = None, image_path: str = None) -> dict:
     if not user_description and not image_path:
         return {"error": "No description or image provided."}
@@ -75,12 +74,16 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
     system_prompt = (
         "You are an expert at extracting One Piece Card Game (OPTCG) details from images and text. "
         "Your goal is to provide a JSON object with the following fields: 'name', 'set_name', "
-        "'card_number', 'rarity', 'color', 'quantity', 'purchase_price_sgd', 'purchase_date' "
-        "(YYYY-MM-DD), and 'image_url'. If an image is provided, prioritize information from the image. "
+        "'card_number', 'rarity', 'color', 'quantity', "
+        "'purchase_price_original', 'original_currency', "
+        "'purchase_date' (YYYY-MM-DD), and 'image_url'. "
+        "If an image is provided, prioritize information from the image. "
+        "For 'original_currency', identify the currency symbol (e.g., '¥', '$', 'SGD') and use its 3-letter code (e.g., 'JPY', 'USD', 'SGD'). If no currency is specified, assume it's 'SGD'. "
         "If a field is not available, use sensible defaults (e.g., quantity: 1, price: 0.0, "
         "date: today's date, empty string for others). "
         "For 'rarity', identify common rarities like SR, R, UC, C, or special versions like Parallel, "
         "Manga Art, or Alt-Art (AA). "
+        "If the user mentions or if the card text/image includes \"P/L\", \"PL\", or \"Parallel Leader\", set the rarity to \"Parallel/Leader\" regardless of other rarity descriptions. "
         "Ensure the output is valid JSON only."
     )
 
@@ -116,7 +119,6 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
         ai_response_content = response.choices[0].message.content
         print(f"AI Raw Response: {ai_response_content}")
 
-        # Handle cases where the AI returns None or an empty response
         if ai_response_content is None:
             return {"error": "AI response content was empty. The AI may not have been able to process the request."}
         
@@ -128,9 +130,13 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
         card_data.setdefault('rarity', '')
         card_data.setdefault('color', '')
         card_data.setdefault('quantity', 1)
-        card_data.setdefault('purchase_price_sgd', 0.0)
+        card_data.setdefault('purchase_price_original', 0.0)
+        card_data.setdefault('original_currency', 'SGD')
         card_data.setdefault('purchase_date', date.today().isoformat())
         card_data.setdefault('image_url', '')
+
+        # Set purchase_price_sgd to 0.0 initially, it will be calculated in app.py
+        card_data.setdefault('purchase_price_sgd', 0.0) 
         card_data.setdefault('current_value_sgd', 0.0)
 
         return card_data
@@ -173,7 +179,3 @@ if __name__ == "__main__":
     description = "I got 2 copies of Zoro from OP01, a Super Rare for $25 each."
     details = get_card_details_from_ai(description)
     print(f"Details from text: {details}")
-
-    # You can test with a local image file path here
-    # details_with_image = get_card_details_from_ai_multimodal(image_path="path/to/your/image.jpg")
-    # print(f"Details from image: {details_with_image}")

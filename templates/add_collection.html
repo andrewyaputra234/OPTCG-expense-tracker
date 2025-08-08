@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Add Collection{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Create New Collection</h1>
+    <form action="{{ url_for('add_collection') }}" method="POST">
+        <div class="mb-3">
+            <label for="name" class="form-label">Collection Name</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+        </div>
+        <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Create Collection</button>
+        <a href="{{ url_for('collections_list') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

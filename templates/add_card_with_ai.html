@@ -32,6 +32,17 @@
                     <input class="form-control" type="file" id="card_image" name="card_image" accept="image/*">
                     <div class="form-text">Upload a clear photo of the card for more accurate details.</div>
                 </div>
+
+                <div class="mb-3">
+                    <label for="collection_id" class="form-label">Select Collection</label>
+                    <select class="form-select" id="collection_id" name="collection_id">
+                        <option value="">(None)</option>
+                        {% for collection in collections %}
+                            <option value="{{ collection.id }}">{{ collection.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary">Process with AI</button>
                 </div>

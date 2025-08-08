@@ -41,6 +41,17 @@
                 <label for="color" class="form-label">Color (e.g., Red, Green, Blue)</label>
                 <input type="text" class="form-control" id="color" name="color">
             </div>
+            
+            <div class="mb-3">
+                <label for="collection_id" class="form-label">Select Collection</label>
+                <select class="form-select" id="collection_id" name="collection_id">
+                    <option value="">(None)</option>
+                    {% for collection in collections %}
+                        <option value="{{ collection.id }}">{{ collection.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
             <div class="mb-3">
                 <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
                 <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>

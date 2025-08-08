@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Edit Card: {{ card.name }}</h1>
+<form method="POST">
+    <div class="mb-3">
+        <label for="name" class="form-label">Card Name</label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ card.name }}" required>
+    </div>
+    
+    <div class="mb-3">
+        <label for="set_name" class="form-label">Set Name</label>
+        <input type="text" class="form-control" id="set_name" name="set_name" value="{{ card.set_name or '' }}">
+    </div>
+
+    <div class="mb-3">
+        <label for="collection_id" class="form-label">Select Collection</label>
+        <select class="form-select" id="collection_id" name="collection_id">
+            <option value="" {% if not card.collection_id %}selected{% endif %}>(None)</option>
+            {% for collection in collections %}
+                <option value="{{ collection.id }}" {% if card.collection_id == collection.id %}selected{% endif %}>{{ collection.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <button type="submit" class="btn btn-primary">Update Card</button>
+</form>
+{% endblock %}
