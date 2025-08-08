@@ -1,0 +1,16 @@
+# Virtual environment
+venv/
+.venv/
+
+# Instance folder for Flask
+instance/
+
+# Environment variables
+.env
+
+# Python compiled files
+__pycache__/
+*.pyc
+
+# VS Code settings
+.vscode/

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Card{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <h1 class="mb-4">Add a New Card to Your Collection</h1>
+
+        {# Display Flash Messages if any #}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alert-container">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category == 'error' and 'danger' or category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('add_card') }}">
+            <div class="mb-3">
+                <label for="name" class="form-label">Card Name <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="name" name="name" required>
+            </div>
+            <div class="mb-3">
+                <label for="set_name" class="form-label">Set Name</label>
+                <input type="text" class="form-control" id="set_name" name="set_name">
+            </div>
+            <div class="mb-3">
+                <label for="card_number" class="form-label">Card Number (e.g., OP01-001)</label>
+                <input type="text" class="form-control" id="card_number" name="card_number">
+            </div>
+            <div class="mb-3">
+                <label for="rarity" class="form-label">Rarity (e.g., C, UC, R, SR, SEC)</label>
+                <input type="text" class="form-control" id="rarity" name="rarity">
+            </div>
+            <div class="mb-3">
+                <label for="color" class="form-label">Color (e.g., Red, Green, Blue)</label>
+                <input type="text" class="form-control" id="color" name="color">
+            </div>
+            <div class="mb-3">
+                <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
+            </div>
+            <div class="mb-3">
+                <label for="purchase_price_sgd" class="form-label">Purchase Price (SGD) <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="purchase_price_sgd" name="purchase_price_sgd" step="0.01" required>
+            </div>
+            <div class="mb-3">
+                <label for="purchase_date" class="form-label">Purchase Date <span class="text-danger">*</span></label>
+                <input type="date" class="form-control" id="purchase_date" name="purchase_date" value="{{ today_date }}" required>
+            </div>
+            <div class="mb-3">
+                <label for="current_value_sgd" class="form-label">Current Value (SGD)</label>
+                <input type="number" class="form-control" id="current_value_sgd" name="current_value_sgd" step="0.01">
+            </div>
+            <div class="mb-3">
+                <label for="image_url" class="form-label">Image URL</label>
+                <input type="url" class="form-control" id="image_url" name="image_url" placeholder="Optional URL for card image">
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Add Card</button>
+            <a href="{{ url_for('collection') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+{% endblock %}
