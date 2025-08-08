@@ -58,6 +58,7 @@
                             <th scope="col">Rarity</th>
                             <th scope="col">Color</th>
                             <th scope="col">Quantity</th>
+                            <th scope="col">Purchase Price (Original)</th>
                             <th scope="col">Purchase Price (SGD)</th>
                             <th scope="col">Current Value (SGD)</th>
                             <th scope="col">Purchase Date</th>
@@ -73,6 +74,7 @@
                             <td>{{ card.rarity }}</td>
                             <td>{{ card.color }}</td>
                             <td>{{ card.quantity }}</td>
+                            <td>{{ card.purchase_price_original|round(2) }} {{ card.original_currency }}</td>
                             <td>${{ card.purchase_price_sgd|round(2) }}</td>
                             <td>${{ card.current_value_sgd|round(2) }}</td>
                             <td>{{ card.purchase_date.strftime('%Y-%m-%d') }}</td>

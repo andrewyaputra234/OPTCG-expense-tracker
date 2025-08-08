@@ -1,28 +1,95 @@
 {% extends "base.html" %}
 
-{% block content %}
-<h1 class="mb-4">Edit Card: {{ card.name }}</h1>
-<form method="POST">
-    <div class="mb-3">
-        <label for="name" class="form-label">Card Name</label>
-        <input type="text" class="form-control" id="name" name="name" value="{{ card.name }}" required>
-    </div>
-    
-    <div class="mb-3">
-        <label for="set_name" class="form-label">Set Name</label>
-        <input type="text" class="form-control" id="set_name" name="set_name" value="{{ card.set_name or '' }}">
-    </div>
+{% block title %}Edit Card{% endblock %}
 
-    <div class="mb-3">
-        <label for="collection_id" class="form-label">Select Collection</label>
-        <select class="form-select" id="collection_id" name="collection_id">
-            <option value="" {% if not card.collection_id %}selected{% endif %}>(None)</option>
-            {% for collection in collections %}
-                <option value="{{ collection.id }}" {% if card.collection_id == collection.id %}selected{% endif %}>{{ collection.name }}</option>
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Edit Card: {{ card.name }}</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="alert-container">
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category == 'error' and 'danger' or category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
             {% endfor %}
-        </select>
-    </div>
-    
-    <button type="submit" class="btn btn-primary">Update Card</button>
-</form>
+        </div>
+    {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('edit_card', card_id=card.id) }}">
+        <div class="mb-3">
+            <label for="name" class="form-label">Card Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="name" name="name" value="{{ card.name }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="set_name" class="form-label">Set Name</label>
+            <input type="text" class="form-control" id="set_name" name="set_name" value="{{ card.set_name }}">
+        </div>
+        <div class="mb-3">
+            <label for="card_number" class="form-label">Card Number (e.g., OP01-001)</label>
+            <input type="text" class="form-control" id="card_number" name="card_number" value="{{ card.card_number }}">
+        </div>
+        <div class="mb-3">
+            <label for="rarity" class="form-label">Rarity (e.g., C, UC, R, SR, SEC)</label>
+            <input type="text" class="form-control" id="rarity" name="rarity" value="{{ card.rarity }}">
+        </div>
+        <div class="mb-3">
+            <label for="color" class="form-label">Color (e.g., Red, Green, Blue)</label>
+            <input type="text" class="form-control" id="color" name="color" value="{{ card.color }}">
+        </div>
+
+        <div class="mb-3">
+            <label for="collection_id" class="form-label">Select Collection</label>
+            <select class="form-select" id="collection_id" name="collection_id">
+                <option value="">(None)</option>
+                {% for collection in collections %}
+                    <option value="{{ collection.id }}" {% if card.collection_id == collection.id %}selected{% endif %}>{{ collection.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="{{ card.quantity }}" required>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="purchase_price_original" class="form-label">Purchase Price (Original Currency) <span class="text-danger">*</span></label>
+                <input type="number" class="form-control" id="purchase_price_original" name="purchase_price_original" step="0.01" value="{{ card.purchase_price_original }}" required>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="original_currency" class="form-label">Original Currency <span class="text-danger">*</span></label>
+                <select class="form-select" id="original_currency" name="original_currency" required>
+                    <option value="SGD" {% if card.original_currency == 'SGD' %}selected{% endif %}>SGD</option>
+                    <option value="JPY" {% if card.original_currency == 'JPY' %}selected{% endif %}>JPY</option>
+                    <option value="USD" {% if card.original_currency == 'USD' %}selected{% endif %}>USD</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="purchase_price_sgd" class="form-label">Purchase Price (SGD)</label>
+            <input type="number" class="form-control" id="purchase_price_sgd" name="purchase_price_sgd" step="0.01" value="{{ card.purchase_price_sgd }}">
+        </div>
+        <div class="mb-3">
+            <label for="current_value_sgd" class="form-label">Current Value (SGD)</label>
+            <input type="number" class="form-control" id="current_value_sgd" name="current_value_sgd" step="0.01" value="{{ card.current_value_sgd }}">
+        </div>
+        <div class="mb-3">
+            <label for="purchase_date" class="form-label">Purchase Date <span class="text-danger">*</span></label>
+            <input type="date" class="form-control" id="purchase_date" name="purchase_date" value="{{ card.purchase_date.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="image_url" class="form-label">Image URL</label>
+            <input type="url" class="form-control" id="image_url" name="image_url" placeholder="Optional URL for card image" value="{{ card.image_url }}">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <a href="{{ url_for('collection') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
 {% endblock %}
