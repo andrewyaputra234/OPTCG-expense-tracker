@@ -75,23 +75,3 @@ flask run
 The application will be available at http://127.0.0.1:5000.
 
 File Structure
-This project has the following key files and directories:
-
-.
-├── app.py                  # The main Flask application file with all routes
-├── models.py               # Defines the database models (Card, Collection, Expense, etc.)
-├── one_piece_tcg.sqlite    # The SQLite database file (created automatically)
-├── requirements.txt        # Project dependencies
-├── templates/
-│   ├── base.html           # The base template with navigation
-│   ├── index.html          # Homepage
-│   ├── collection.html     # Main card collection page with sidebar
-│   ├── collections_list.html # Page for managing collections
-│   ├── add_collection.html # Form for adding a new collection
-│   ├── edit_collection.html  # Form for editing a collection
-│   ├── add_card.html       # Form for adding a card
-│   ├── add_card_with_ai.html # AI-powered card addition form
-│   └── edit_card.html      # Form for editing an existing card
-└── README.md
-
-```bash
