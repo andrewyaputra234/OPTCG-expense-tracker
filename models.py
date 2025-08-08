@@ -31,14 +31,6 @@ class Card(db.Model):
     # New foreign key to link to a Collection
     collection_id = db.Column(db.Integer, db.ForeignKey('collection.id'), nullable=True)
 
-class Expense(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    description = db.Column(db.String(250), nullable=False)
-    amount_sgd = db.Column(db.Float, nullable=False)
-    category = db.Column(db.String(100), nullable=False)
-    expense_date = db.Column(db.Date, nullable=False)
-    card_id = db.Column(db.Integer, db.ForeignKey('card.id'), nullable=True)
-
 class WishlistItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     card_name = db.Column(db.String(150), nullable=False)

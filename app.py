@@ -56,7 +56,7 @@ def create_app(test_config=None):
         pass
 
     # MODIFIED: Import Collection model
-    from .models import db, Card, Expense, WishlistItem, Collection
+    from .models import db, Card, WishlistItem, Collection
     db.init_app(app)
 
     with app.app_context():
