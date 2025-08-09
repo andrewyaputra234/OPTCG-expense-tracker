@@ -95,7 +95,21 @@
                         <p class="mb-0">{{ total_price|round(2) }} {{ currency }}</p>
                     {% endfor %}
                 {% endif %}
-                <h4 class="mb-0">Total Purchase Price: ${{ total_purchase_price_sgd|round(2) }} SGD</h4>
+                <h4 class="mb-0">
+                    Subtotal: 
+                    <span id="subtotalPriceSgd" data-base-price="{{ total_purchase_price_sgd }}">
+                        ${{ total_purchase_price_sgd|round(2) }} SGD
+                    </span>
+                </h4>
+                <div class="form-check form-check-inline mt-2">
+                    <input class="form-check-input" type="checkbox" id="mailingFeeCheckbox">
+                    <label class="form-check-label" for="mailingFeeCheckbox">
+                        Smartpac (Mailing) +$3.50
+                    </label>
+                </div>
+                <h4 class="mt-2" id="totalWithMailingFeeContainer" style="display: none;">
+                    Total with Mailing: <span id="totalPriceWithMailingSgd"></span>
+                </h4>
             </div>
 
             {% else %}
@@ -111,4 +125,27 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkbox = document.getElementById('mailingFeeCheckbox');
+        const subtotalElement = document.getElementById('subtotalPriceSgd');
+        const totalWithMailingContainer = document.getElementById('totalWithMailingFeeContainer');
+        const totalWithMailingElement = document.getElementById('totalPriceWithMailingSgd');
+        const mailingFee = 3.50;
+
+        // Get the initial base price from the data attribute
+        const basePrice = parseFloat(subtotalElement.dataset.basePrice);
+
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                const totalWithMailing = basePrice + mailingFee;
+                totalWithMailingElement.textContent = '$' + totalWithMailing.toFixed(2) + ' SGD';
+                totalWithMailingContainer.style.display = 'block';
+            } else {
+                totalWithMailingContainer.style.display = 'none';
+            }
+        });
+    });
+</script>
 {% endblock %}
