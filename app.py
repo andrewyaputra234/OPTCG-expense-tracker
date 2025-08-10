@@ -56,7 +56,7 @@ def create_app(test_config=None):
         pass
 
     # MODIFIED: Import Collection model
-    from .models import db, Card, WishlistItem, Collection
+    from models import db, Card, WishlistItem, Collection
     db.init_app(app)
 
     with app.app_context():
@@ -224,7 +224,7 @@ def create_app(test_config=None):
     # --- MODIFIED `add_card_with_ai` ROUTE ---
     @app.route('/add_card_with_ai', methods=['GET', 'POST'])
     def add_card_with_ai():
-        from .chatbot_service import get_card_details_from_ai_multimodal, generate_ai_confirmation_message
+        from chatbot_service import get_card_details_from_ai_multimodal, generate_ai_confirmation_message
         
         if request.method == 'POST':
             user_description = request.form.get('card_description')

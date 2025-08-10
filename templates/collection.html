@@ -28,7 +28,7 @@
         <div class="col-md-9">
             <h2 class="text-center mb-4">
                 {% if collection %}
-                    {{ collection.name }} 
+                    {{ collection.name }} Collection
                 {% else %}
                     My Card Collection
                 {% endif %}
@@ -49,7 +49,7 @@
 
             {% if cards %}
             <div class="table-responsive">
-                <table class="table table-hover table-striped">
+                <table class="table table-hover table-striped" id="cardTable">
                     <thead class="table-dark">
                         <tr>
                             <th scope="col">Name</th>
@@ -59,7 +59,9 @@
                             <th scope="col">Color</th>
                             <th scope="col">Quantity</th>
                             <th scope="col">Total Purchase Price (Original)</th>
-                            <th scope="col">Total Purchase Price (SGD)</th>
+                            <th scope="col" id="sortPriceSgd">
+                                Total Purchase Price (SGD) <span id="sortIcon"></span>
+                            </th>
                             <th scope="col">Purchase Date</th>
                             <th scope="col">Actions</th>
                         </tr>
@@ -145,6 +147,41 @@
             } else {
                 totalWithMailingContainer.style.display = 'none';
             }
+        });
+
+        // --- Table Sorting Logic ---
+
+        const sortPriceSgdHeader = document.getElementById('sortPriceSgd');
+        const sortIcon = document.getElementById('sortIcon');
+        const tableBody = document.querySelector('#cardTable tbody');
+        let isAscending = true;
+
+        // Add a pointer cursor to indicate it's clickable
+        sortPriceSgdHeader.style.cursor = 'pointer';
+
+        // Initial sort icon
+        sortIcon.innerHTML = '&#9650;'; // Up arrow for ascending
+
+        sortPriceSgdHeader.addEventListener('click', () => {
+            const rows = Array.from(tableBody.querySelectorAll('tr'));
+
+            rows.sort((a, b) => {
+                const priceA = parseFloat(a.cells[7].textContent.replace('$', '').replace('SGD', '').trim());
+                const priceB = parseFloat(b.cells[7].textContent.replace('$', '').replace('SGD', '').trim());
+
+                if (isAscending) {
+                    return priceA - priceB;
+                } else {
+                    return priceB - priceA;
+                }
+            });
+
+            // Clear the table body and append the sorted rows
+            rows.forEach(row => tableBody.appendChild(row));
+
+            // Toggle sort direction and update the icon
+            isAscending = !isAscending;
+            sortIcon.innerHTML = isAscending ? '&#9650;' : '&#9660;';
         });
     });
 </script>
