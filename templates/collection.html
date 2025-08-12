@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}My Collection{% endblock %}
+{% block title %}
+{% if collection %}
+    {{ collection.name }} Collection
+{% else %}
+    My Card Collection
+{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid mt-4">
@@ -33,7 +39,7 @@
                     My Card Collection
                 {% endif %}
             </h2>
-
+            
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <div class="alert-container">
@@ -59,6 +65,7 @@
                             <th scope="col">Color</th>
                             <th scope="col">Quantity</th>
                             <th scope="col">Total Purchase Price (Original)</th>
+                            <th scope="col">Price per Unit (¥)</th>
                             <th scope="col" id="sortPriceSgd">
                                 Total Purchase Price (SGD) <span id="sortIcon"></span>
                             </th>
@@ -76,7 +83,23 @@
                             <td>{{ card.color }}</td>
                             <td>{{ card.quantity }}</td>
                             <td>{{ (card.purchase_price_original * card.quantity)|round(2) }} {{ card.original_currency }}</td>
-                            <td>${{ (card.purchase_price_sgd * card.quantity)|round(2) }}</td>
+                            <td data-original-price="{{ (card.purchase_price_original|default(0) * card.quantity)|round(2) }}" 
+                                data-original-currency="{{ card.original_currency|default('SGD') }}"
+                                data-sgd-price="{{ (card.purchase_price_sgd|default(0) * card.quantity)|round(2) }}">
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2">÷</span>
+                                    <input type="number" 
+                                           class="form-control form-control-sm divisor-input-yen" 
+                                           style="width: 80px;" 
+                                           min="0.01" 
+                                           step="0.01"
+                                           {% if card.original_currency != 'JPY' %}disabled{% endif %}>
+                                    <span class="ms-2">= <span class="result-span-yen">0.00</span></span>
+                                </div>
+                            </td>
+                            <td class="total-price-sgd-cell" data-sort-value="{{ (card.purchase_price_sgd * card.quantity)|round(2) }}">
+                                ${{ (card.purchase_price_sgd * card.quantity)|round(2) }}
+                            </td>
                             <td>{{ card.purchase_date.strftime('%Y-%m-%d') }}</td>
                             <td>
                                 <a href="{{ url_for('edit_card', card_id=card.id) }}" class="btn btn-sm btn-warning">Edit</a>
@@ -91,12 +114,6 @@
             </div>
             
             <div class="text-end mt-4 p-3 border-top border-2">
-                {% if total_purchase_price_original %}
-                    <h5 class="mb-2">Total Purchase Price by Currency:</h5>
-                    {% for currency, total_price in total_purchase_price_original.items() %}
-                        <p class="mb-0">{{ total_price|round(2) }} {{ currency }}</p>
-                    {% endfor %}
-                {% endif %}
                 <h4 class="mb-0">
                     Subtotal: 
                     <span id="subtotalPriceSgd" data-base-price="{{ total_purchase_price_sgd }}">
@@ -130,18 +147,38 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Function to recalculate and update the subtotal
+        function updateSubtotal() {
+            let total = 0;
+            document.querySelectorAll('.total-price-sgd-cell').forEach(cell => {
+                const value = parseFloat(cell.dataset.sortValue);
+                if (!isNaN(value)) {
+                    total += value;
+                }
+            });
+            const subtotalElement = document.getElementById('subtotalPriceSgd');
+            subtotalElement.textContent = '$' + total.toFixed(2) + ' SGD';
+            subtotalElement.dataset.basePrice = total.toFixed(2);
+
+            // Also update mailing fee if checked
+            const checkbox = document.getElementById('mailingFeeCheckbox');
+            if (checkbox.checked) {
+                const totalWithMailing = total + 3.50;
+                document.getElementById('totalPriceWithMailingSgd').textContent = '$' + totalWithMailing.toFixed(2) + ' SGD';
+            }
+        }
+
+        // Mailing Fee Logic
         const checkbox = document.getElementById('mailingFeeCheckbox');
         const subtotalElement = document.getElementById('subtotalPriceSgd');
         const totalWithMailingContainer = document.getElementById('totalWithMailingFeeContainer');
         const totalWithMailingElement = document.getElementById('totalPriceWithMailingSgd');
         const mailingFee = 3.50;
-
-        // Get the initial base price from the data attribute
-        const basePrice = parseFloat(subtotalElement.dataset.basePrice);
-
+        
         checkbox.addEventListener('change', function() {
+            const currentSubtotal = parseFloat(subtotalElement.dataset.basePrice);
             if (this.checked) {
-                const totalWithMailing = basePrice + mailingFee;
+                const totalWithMailing = currentSubtotal + mailingFee;
                 totalWithMailingElement.textContent = '$' + totalWithMailing.toFixed(2) + ' SGD';
                 totalWithMailingContainer.style.display = 'block';
             } else {
@@ -149,25 +186,20 @@
             }
         });
 
-        // --- Table Sorting Logic ---
-
+        // Table Sorting Logic
         const sortPriceSgdHeader = document.getElementById('sortPriceSgd');
         const sortIcon = document.getElementById('sortIcon');
         const tableBody = document.querySelector('#cardTable tbody');
         let isAscending = true;
 
-        // Add a pointer cursor to indicate it's clickable
         sortPriceSgdHeader.style.cursor = 'pointer';
-
-        // Initial sort icon
-        sortIcon.innerHTML = '&#9650;'; // Up arrow for ascending
+        sortIcon.innerHTML = '&#9650;';
 
         sortPriceSgdHeader.addEventListener('click', () => {
             const rows = Array.from(tableBody.querySelectorAll('tr'));
-
             rows.sort((a, b) => {
-                const priceA = parseFloat(a.cells[7].textContent.replace('$', '').replace('SGD', '').trim());
-                const priceB = parseFloat(b.cells[7].textContent.replace('$', '').replace('SGD', '').trim());
+                const priceA = parseFloat(a.cells[8].dataset.sortValue);
+                const priceB = parseFloat(b.cells[8].dataset.sortValue);
 
                 if (isAscending) {
                     return priceA - priceB;
@@ -176,12 +208,40 @@
                 }
             });
 
-            // Clear the table body and append the sorted rows
             rows.forEach(row => tableBody.appendChild(row));
-
-            // Toggle sort direction and update the icon
             isAscending = !isAscending;
             sortIcon.innerHTML = isAscending ? '&#9650;' : '&#9660;';
+        });
+
+        // Price per Unit (Yen) Calculation Logic
+        const divisorInputs = document.querySelectorAll('.divisor-input-yen');
+
+        divisorInputs.forEach(input => {
+            input.addEventListener('input', function() {
+                const priceCell = this.closest('td');
+                const row = this.closest('tr');
+                const originalPrice = parseFloat(priceCell.dataset.originalPrice);
+                const originalCurrency = priceCell.dataset.originalCurrency;
+                const sgdPrice = parseFloat(priceCell.dataset.sgdPrice);
+                const divisor = parseFloat(this.value);
+
+                const resultSpan = priceCell.querySelector('.result-span-yen');
+                const totalSgdCell = row.querySelector('.total-price-sgd-cell');
+                
+                if (originalCurrency === 'JPY') {
+                    if (isNaN(divisor) || divisor === 0) {
+                        resultSpan.textContent = '0.00';
+                        totalSgdCell.textContent = '$' + sgdPrice.toFixed(2);
+                        totalSgdCell.dataset.sortValue = sgdPrice;
+                    } else {
+                        const newTotalSgd = originalPrice / divisor;
+                        resultSpan.textContent = newTotalSgd.toFixed(2);
+                        totalSgdCell.textContent = '$' + newTotalSgd.toFixed(2);
+                        totalSgdCell.dataset.sortValue = newTotalSgd;
+                    }
+                    updateSubtotal();
+                } 
+            });
         });
     });
 </script>

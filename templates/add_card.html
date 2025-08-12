@@ -56,9 +56,21 @@
                 <label for="quantity" class="form-label">Quantity <span class="text-danger">*</span></label>
                 <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
             </div>
-            <div class="mb-3">
-                <label for="purchase_price_sgd" class="form-label">Purchase Price (SGD) <span class="text-danger">*</span></label>
-                <input type="number" class="form-control" id="purchase_price_sgd" name="purchase_price_sgd" step="0.01" required>
+            
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label for="purchase_price_original" class="form-label">Purchase Price <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control" id="purchase_price_original" name="purchase_price_original" step="0.01" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="original_currency" class="form-label">Currency</label>
+                    <select class="form-select" id="original_currency" name="original_currency" required>
+                        <option value="SGD">SGD</option>
+                        <option value="USD">USD</option>
+                        <option value="JPY">JPY</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
             </div>
             <div class="mb-3">
                 <label for="purchase_date" class="form-label">Purchase Date <span class="text-danger">*</span></label>

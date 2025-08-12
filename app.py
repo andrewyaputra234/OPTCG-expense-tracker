@@ -4,7 +4,8 @@ import json
 from flask import Flask, render_template, request, redirect, url_for, flash, g
 from datetime import date
 from dotenv import load_dotenv
-from sqlalchemy.exc import IntegrityError # NEW: for handling duplicate collection names
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime
 
 load_dotenv()
 
@@ -20,7 +21,7 @@ def get_exchange_rate(from_currency, to_currency):
     url = f"https://api.frankfurter.app/latest?from={from_currency}&to={to_currency}"
     try:
         response = requests.get(url, timeout=5)
-        response.raise_for_status() # Raise an exception for bad status codes (4xx or 5xx)
+        response.raise_for_status()
         data = response.json()
         rate = data['rates'].get(to_currency)
         if rate:
@@ -55,7 +56,7 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    # MODIFIED: Import Collection model
+    # MODIFIED: Use absolute import
     from models import db, Card, WishlistItem, Collection
     db.init_app(app)
 
@@ -76,11 +77,17 @@ def create_app(test_config=None):
             cards = Card.query.filter_by(collection_id=collection_id).order_by(Card.name).all()
         else:
             # Default view for all cards not in a collection
-            cards = Card.query.filter_by(collection_id=None).order_by(Card.name).all()
+            cards = Card.query.filter(Card.collection_id.is_(None)).order_by(Card.name).all()
             collection_obj = None
 
-        # NEW: Calculate the total purchase price in SGD
+        # Calculate the total purchase price in SGD
         total_purchase_price_sgd = sum(card.purchase_price_sgd * card.quantity for card in cards)
+        
+        # NEW: Calculate totals per currency for original prices
+        total_purchase_price_original = {}
+        for card in cards:
+            currency = card.original_currency or 'SGD'
+            total_purchase_price_original[currency] = total_purchase_price_original.get(currency, 0) + (card.purchase_price_original * card.quantity)
 
         card_names = sorted(list(set(card.name for card in cards)))
         card_values = {name: sum(c.purchase_price_sgd for c in cards if c.name == name) for name in card_names}
@@ -95,7 +102,8 @@ def create_app(test_config=None):
             card_names=card_names,
             card_values=card_values,
             all_collections=all_collections,
-            total_purchase_price_sgd=total_purchase_price_sgd # NEW: Pass the total to the template
+            total_purchase_price_sgd=total_purchase_price_sgd,
+            total_purchase_price_original=total_purchase_price_original
         )
 
     # --- NEW COLLECTION ROUTES ---
@@ -168,15 +176,15 @@ def create_app(test_config=None):
             color = request.form.get('color')
             quantity = int(request.form['quantity'])
             
-            purchase_price_original = float(request.form['purchase_price_original'])
+            # Use .get() to avoid KeyError if the form field is missing
+            purchase_price_original = float(request.form.get('purchase_price_original', 0.0))
             original_currency = request.form.get('original_currency')
-            current_value_sgd = float(request.form.get('current_value_sgd') or 0.0)
+            current_value_sgd = float(request.form.get('current_value_sgd', 0.0))
             image_url = request.form.get('image_url')
-            purchase_date_str = request.form['purchase_date']
+            purchase_date_str = request.form.get('purchase_date')
             
-            # NEW: Get the selected collection ID from the form
-            collection_id = request.form.get('collection_id')
-            if collection_id == '': collection_id = None # Handle empty selection
+            collection_id_str = request.form.get('collection_id')
+            collection_id = int(collection_id_str) if collection_id_str else None
 
             try:
                 purchase_date = date.fromisoformat(purchase_date_str)
@@ -203,7 +211,7 @@ def create_app(test_config=None):
                 purchase_price_sgd=purchase_price_sgd,
                 current_value_sgd=current_value_sgd, image_url=image_url, 
                 purchase_date=purchase_date,
-                collection_id=collection_id # NEW: Pass the collection_id
+                collection_id=collection_id
             )
             try:
                 db.session.add(new_card)
@@ -213,9 +221,12 @@ def create_app(test_config=None):
                 db.session.rollback()
                 flash(f'An error occurred while adding the card: {e}', 'danger')
             
-            return redirect(url_for('collection'))
+            # FIXED: Redirect to the specific collection page if a collection was selected
+            if collection_id:
+                return redirect(url_for('collection', collection_id=collection_id))
+            else:
+                return redirect(url_for('collection'))
 
-        # NEW: Query collections for the form dropdown
         collections = Collection.query.order_by(Collection.name).all()
         today_date = date.today().isoformat()
         return render_template('add_card.html', today_date=today_date, collections=collections)
@@ -224,15 +235,15 @@ def create_app(test_config=None):
     # --- MODIFIED `add_card_with_ai` ROUTE ---
     @app.route('/add_card_with_ai', methods=['GET', 'POST'])
     def add_card_with_ai():
+        # FIXED: Use absolute import
         from chatbot_service import get_card_details_from_ai_multimodal, generate_ai_confirmation_message
         
         if request.method == 'POST':
             user_description = request.form.get('card_description')
             card_image = request.files.get('card_image')
             
-            # NEW: Get the selected collection ID
-            collection_id = request.form.get('collection_id')
-            if collection_id == '': collection_id = None
+            collection_id_str = request.form.get('collection_id')
+            collection_id = int(collection_id_str) if collection_id_str else None
 
             if not user_description and (not card_image or card_image.filename == ''):
                 flash("Please provide a card description or upload an image.", "error")
@@ -284,7 +295,7 @@ def create_app(test_config=None):
                     current_value_sgd=float(card_data.get('current_value_sgd', 0.0)),
                     image_url=card_data.get('image_url'),
                     purchase_date=date.fromisoformat(card_data.get('purchase_date')),
-                    collection_id=collection_id # NEW: Pass the collection_id
+                    collection_id=collection_id
                 )
                 db.session.add(new_card)
                 db.session.commit()
@@ -292,14 +303,17 @@ def create_app(test_config=None):
                 confirmation_message = generate_ai_confirmation_message(card_data)
                 flash(confirmation_message, 'success')
                 
-                return redirect(url_for('collection'))
+                # FIXED: Redirect to the specific collection page if a collection was selected
+                if collection_id:
+                    return redirect(url_for('collection', collection_id=collection_id))
+                else:
+                    return redirect(url_for('collection'))
 
             except Exception as e:
                 db.session.rollback()
                 flash(f"An error occurred while saving the card: {e}", "error")
                 return redirect(url_for('add_card_with_ai'))
         
-        # NEW: Query collections for the form dropdown
         collections = Collection.query.order_by(Collection.name).all()
         return render_template('add_card_with_ai.html', collections=collections)
     # --- END OF MODIFIED `add_card_with_ai` ROUTE ---
@@ -322,11 +336,9 @@ def create_app(test_config=None):
             card.purchase_price_original = float(request.form['purchase_price_original'])
             card.original_currency = request.form.get('original_currency')
             
-            # NEW: Update the card's collection
-            collection_id = request.form.get('collection_id')
-            card.collection_id = int(collection_id) if collection_id else None
+            collection_id_str = request.form.get('collection_id')
+            card.collection_id = int(collection_id_str) if collection_id_str else None
 
-            # Perform currency conversion on edit
             if card.original_currency and card.original_currency != 'SGD':
                 rate = get_exchange_rate(card.original_currency, 'SGD')
                 if rate:
@@ -337,7 +349,6 @@ def create_app(test_config=None):
                     flash("Failed to get exchange rate, purchase price in SGD set to 0.0", "warning")
             else:
                 card.purchase_price_sgd = card.purchase_price_original
-            # --- END OF MODIFIED EDIT ROUTE ---
 
             card.current_value_sgd = float(request.form.get('current_value_sgd') or 0.0)
             card.image_url = request.form.get('image_url')
@@ -353,7 +364,6 @@ def create_app(test_config=None):
             flash('Card updated successfully!', 'success')
             return redirect(url_for('collection', collection_id=card.collection_id))
         
-        # NEW: Query collections for the form dropdown
         collections = Collection.query.order_by(Collection.name).all()
         return render_template('edit_card.html', card=card, collections=collections)
 
@@ -366,7 +376,7 @@ def create_app(test_config=None):
         db.session.delete(card)
         db.session.commit()
         flash('Card deleted successfully!', 'success')
-        return redirect(url_for('collection'))
+        return redirect(url_for('collection', collection_id=card.collection_id))
 
     @app.route('/expenses')
     def expenses():
