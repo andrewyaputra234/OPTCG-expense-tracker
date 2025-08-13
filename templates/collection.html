@@ -32,31 +32,30 @@
         </div>
 
         <div class="col-md-9">
-            <h2 class="text-center mb-4">
-                {% if collection %}
-                    {{ collection.name }} Collection
-                {% else %}
-                    My Card Collection
+            <div class="main-content-card"> <h2 class="text-center mb-4">
+                    {% if collection %}
+                        {{ collection.name }} Collection
+                    {% else %}
+                        My Card Collection
+                    {% endif %}
+                </h2>
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="alert-container">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category == 'error' and 'danger' or category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% endif %}
-            </h2>
-            
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="alert-container">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category == 'error' and 'danger' or category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-            {% endwith %}
+                {% endwith %}
 
-            {% if cards %}
-            <div class="table-responsive">
-                <table class="table table-hover table-striped" id="cardTable">
-                    <thead class="table-dark">
+                {% if cards %}
+                <table class="collection-table" id="cardTable">
+                    <thead>
                         <tr>
                             <th scope="col">Name</th>
                             <th scope="col">Set Name</th>
@@ -86,16 +85,16 @@
                             <td data-original-price="{{ (card.purchase_price_original|default(0) * card.quantity)|round(2) }}" 
                                 data-original-currency="{{ card.original_currency|default('SGD') }}"
                                 data-sgd-price="{{ (card.purchase_price_sgd|default(0) * card.quantity)|round(2) }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="me-2">÷</span>
-                                    <input type="number" 
-                                           class="form-control form-control-sm divisor-input-yen" 
-                                           style="width: 80px;" 
-                                           min="0.01" 
-                                           step="0.01"
-                                           {% if card.original_currency != 'JPY' %}disabled{% endif %}>
-                                    <span class="ms-2">= <span class="result-span-yen">0.00</span></span>
-                                </div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">÷</span>
+                                        <input type="number" 
+                                                class="form-control form-control-sm divisor-input-yen" 
+                                                style="width: 80px;" 
+                                                min="0.01" 
+                                                step="0.01"
+                                                {% if card.original_currency != 'JPY' %}disabled{% endif %}>
+                                        <span class="ms-2">= <span class="result-span-yen">0.00</span></span>
+                                    </div>
                             </td>
                             <td class="total-price-sgd-cell" data-sort-value="{{ (card.purchase_price_sgd * card.quantity)|round(2) }}">
                                 ${{ (card.purchase_price_sgd * card.quantity)|round(2) }}
@@ -111,36 +110,36 @@
                         {% endfor %}
                     </tbody>
                 </table>
-            </div>
-            
-            <div class="text-end mt-4 p-3 border-top border-2">
-                <h4 class="mb-0">
-                    Subtotal: 
-                    <span id="subtotalPriceSgd" data-base-price="{{ total_purchase_price_sgd }}">
-                        ${{ total_purchase_price_sgd|round(2) }} SGD
-                    </span>
-                </h4>
-                <div class="form-check form-check-inline mt-2">
-                    <input class="form-check-input" type="checkbox" id="mailingFeeCheckbox">
-                    <label class="form-check-label" for="mailingFeeCheckbox">
-                        Smartpac (Mailing) +$3.50
-                    </label>
+                
+                <div class="text-end mt-4 p-3 border-top border-2">
+                    <h4 class="mb-0">
+                        Subtotal: 
+                        <span id="subtotalPriceSgd" data-base-price="{{ total_purchase_price_sgd }}">
+                            ${{ total_purchase_price_sgd|round(2) }} SGD
+                        </span>
+                    </h4>
+                    <div class="form-check form-check-inline mt-2">
+                        <input class="form-check-input" type="checkbox" id="mailingFeeCheckbox">
+                        <label class="form-check-label" for="mailingFeeCheckbox">
+                            Smartpac (Mailing) +$3.50
+                        </label>
+                    </div>
+                    <h4 class="mt-2" id="totalWithMailingFeeContainer" style="display: none;">
+                        Total with Mailing: <span id="totalPriceWithMailingSgd"></span>
+                    </h4>
                 </div>
-                <h4 class="mt-2" id="totalWithMailingFeeContainer" style="display: none;">
-                    Total with Mailing: <span id="totalPriceWithMailingSgd"></span>
-                </h4>
-            </div>
 
-            {% else %}
-            <div class="alert alert-info text-center" role="alert">
-                {% if collection %}
-                    There are no cards in the "{{ collection.name }}" collection yet.
                 {% else %}
-                    You have no cards in your collection yet.
+                <div class="alert alert-info text-center" role="alert">
+                    {% if collection %}
+                        There are no cards in the "{{ collection.name }}" collection yet.
+                    {% else %}
+                        You have no cards in your collection yet.
+                    {% endif %}
+                    <a href="{{ url_for('add_card') }}">Add one here</a> or <a href="{{ url_for('add_card_with_ai') }}">add one with AI</a>!
+                </div>
                 {% endif %}
-                <a href="{{ url_for('add_card') }}">Add one here</a> or <a href="{{ url_for('add_card_with_ai') }}">add one with AI</a>!
             </div>
-            {% endif %}
         </div>
     </div>
 </div>

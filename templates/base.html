@@ -5,34 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}One Piece TCG Tracker{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    {# Include Chart.js via CDN #}
-    <script src="https://cdn.jsdelivr.net/npm/charts.js"></script>
-    {# Link to your custom JS file for charts and other interactivity #}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/charts.js') }}" defer></script>
 </head>
 <body>
-    <nav>
-        <a href="{{ url_for('index') }}">Home</a>
-        <a href="{{ url_for('collections_list') }}">Collections</a>
-        <a href="{{ url_for('collection') }}">My Collection</a>
-        <a href="{{ url_for('add_card') }}">Add Card (Manual)</a>
-        <a href="{{ url_for('add_card_with_ai') }}">Add Card (with AI)</a>
-        <a class="nav-link" href="{{ url_for('wishlist') }}">Wishlist</a>
-    </nav>
-    <main>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flashes">
-                    {% for category, message in messages %}
-                        <li class="{{ category }}">{{ message }}</li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
-        {% block content %}{% endblock %}
+    <header class="site-header">
+        <div class="header-container">
+            <h1 class="site-title"><a href="{{ url_for('index') }}">One Piece TCG Tracker</a></h1>
+            <nav class="site-nav">
+                <a href="{{ url_for('collections_list') }}">Collections</a>
+                <a href="{{ url_for('collection') }}" class="active">My Collection</a>
+                <a href="{{ url_for('add_card') }}">Add Card</a>
+                <a href="{{ url_for('add_card_with_ai') }}">Add Card (with AI)</a>
+                <a href="{{ url_for('wishlist') }}">Wishlist</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="search-bar">
+        <div class="container">
+            <input type="text" placeholder="Search Cards by Name, ID, set, type etc" class="search-input">
+            <button class="search-button">Search</button>
+        </div>
+    </div>
+
+    <main class="site-main">
+        <div class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <ul class="flashes">
+                        {% for category, message in messages %}
+                            <li class="{{ category }}">{{ message }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endwith %}
+            <div class="rotating-card-container">
+                <img src="{{ url_for('static', filename='images/image1.gif') }}" alt="Card GIF 1" class="rotating-card-image active">
+                <img src="{{ url_for('static', filename='images/image2.gif') }}" alt="Card GIF 2" class="rotating-card-image">
+                <img src="{{ url_for('static', filename='images/image3.gif') }}" alt="Card GIF 3" class="rotating-card-image">
+            </div>
+            {% block content %}{% endblock %}
+        </div>
     </main>
-    <footer>
-        <p>&copy; 2024 One Piece TCG Tracker</p>
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2024 One Piece TCG Tracker. All rights reserved.</p>
+        </div>
     </footer>
 </body>
 </html>
