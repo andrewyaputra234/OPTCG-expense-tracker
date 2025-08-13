@@ -56,7 +56,7 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    # MODIFIED: Use absolute import
+    # MODIFIED: Use absolute import and remove Expense
     from models import db, Card, WishlistItem, Collection
     db.init_app(app)
 
@@ -142,10 +142,10 @@ def create_app(test_config=None):
             try:
                 db.session.commit()
                 flash('Collection updated successfully!', 'success')
-                return redirect(url_for('collections_list'))
             except Exception as e:
                 db.session.rollback()
                 flash(f'An error occurred: {e}', 'danger')
+            return redirect(url_for('collections_list'))
         return render_template('edit_collection.html', collection=collection)
 
     @app.route('/delete_collection/<int:collection_id>', methods=['POST'])
@@ -261,49 +261,52 @@ def create_app(test_config=None):
                     flash(f"Error saving image: {e}", "error")
                     return redirect(url_for('add_card_with_ai'))
 
-            card_data = get_card_details_from_ai_multimodal(user_description, image_path)
+            card_data_list = get_card_details_from_ai_multimodal(user_description, image_path)
             
             if image_path and os.path.exists(image_path):
                 os.remove(image_path)
 
-            if 'error' in card_data:
-                flash(f"Error from AI: {card_data['error']}", "error")
+            if isinstance(card_data_list, dict) and 'error' in card_data_list:
+                flash(f"Error from AI: {card_data_list['error']}", "error")
                 return redirect(url_for('add_card_with_ai'))
 
+            # NEW LOGIC: Iterate over the list of cards returned by the AI
             try:
-                purchase_price_original = card_data.get('purchase_price_original')
-                original_currency = card_data.get('original_currency')
+                for card_data in card_data_list:
+                    # Logic to calculate SGD price for each card
+                    purchase_price_original = card_data.get('purchase_price_original')
+                    original_currency = card_data.get('original_currency')
 
-                if original_currency and original_currency != 'SGD':
-                    rate = get_exchange_rate(original_currency, 'SGD')
-                    if rate:
-                        purchase_price_sgd = purchase_price_original * rate
-                        flash(f"Converted {purchase_price_original} {original_currency} to {purchase_price_sgd:.2f} SGD.", "info")
+                    if original_currency and original_currency != 'SGD':
+                        rate = get_exchange_rate(original_currency, 'SGD')
+                        if rate:
+                            purchase_price_sgd = purchase_price_original * rate
+                        else:
+                            purchase_price_sgd = 0.0
                     else:
-                        purchase_price_sgd = 0.0
-                        flash("Failed to get exchange rate, purchase price in SGD set to 0.0", "warning")
-                else:
-                    purchase_price_sgd = purchase_price_original
+                        purchase_price_sgd = purchase_price_original
 
-                new_card = Card(
-                    name=card_data.get('name'), set_name=card_data.get('set_name'),
-                    card_number=card_data.get('card_number'), rarity=card_data.get('rarity'),
-                    color=card_data.get('color'), quantity=int(card_data.get('quantity', 1)),
-                    purchase_price_original=purchase_price_original,
-                    original_currency=original_currency,
-                    purchase_price_sgd=purchase_price_sgd,
-                    current_value_sgd=float(card_data.get('current_value_sgd', 0.0)),
-                    image_url=card_data.get('image_url'),
-                    purchase_date=date.fromisoformat(card_data.get('purchase_date')),
-                    collection_id=collection_id
-                )
-                db.session.add(new_card)
+                    # Create and add the new card object for each card in the list
+                    new_card = Card(
+                        name=card_data.get('name'), set_name=card_data.get('set_name'),
+                        card_number=card_data.get('card_number'), rarity=card_data.get('rarity'),
+                        color=card_data.get('color'), quantity=int(card_data.get('quantity', 1)),
+                        purchase_price_original=purchase_price_original,
+                        original_currency=original_currency,
+                        purchase_price_sgd=purchase_price_sgd,
+                        current_value_sgd=float(card_data.get('current_value_sgd', 0.0)),
+                        image_url=card_data.get('image_url'),
+                        purchase_date=date.fromisoformat(card_data.get('purchase_date', date.today().isoformat())),
+                        collection_id=collection_id
+                    )
+                    db.session.add(new_card)
+
                 db.session.commit()
                 
-                confirmation_message = generate_ai_confirmation_message(card_data)
+                # Generate a single confirmation message for all cards
+                confirmation_message = generate_ai_confirmation_message(card_data_list)
                 flash(confirmation_message, 'success')
                 
-                # FIXED: Redirect to the specific collection page if a collection was selected
                 if collection_id:
                     return redirect(url_for('collection', collection_id=collection_id))
                 else:
@@ -311,7 +314,7 @@ def create_app(test_config=None):
 
             except Exception as e:
                 db.session.rollback()
-                flash(f"An error occurred while saving the card: {e}", "error")
+                flash(f"An error occurred while saving the card(s): {e}", "error")
                 return redirect(url_for('add_card_with_ai'))
         
         collections = Collection.query.order_by(Collection.name).all()
@@ -377,77 +380,6 @@ def create_app(test_config=None):
         db.session.commit()
         flash('Card deleted successfully!', 'success')
         return redirect(url_for('collection', collection_id=card.collection_id))
-
-    @app.route('/expenses')
-    def expenses():
-        all_expenses = Expense.query.order_by(Expense.expense_date.desc()).all()
-        expense_categories = {}
-        for expense in all_expenses:
-            expense_categories[expense.category] = expense_categories.get(expense.category, 0) + expense.amount_sgd
-        chart_labels = list(expense_categories.keys())
-        chart_data = list(expense_categories.values())
-        return render_template('expenses.html', expenses=all_expenses, chart_labels=chart_labels, chart_data=chart_data)
-
-    @app.route('/add_expense', methods=['GET', 'POST'])
-    def add_expense():
-        all_cards = Card.query.order_by(Card.name).all()
-        if request.method == 'POST':
-            description = request.form['description']
-            amount_sgd = float(request.form['amount_sgd'])
-            category = request.form['category']
-            expense_date_str = request.form['expense_date']
-            card_id = request.form.get('card_id')
-            try:
-                expense_date = date.fromisoformat(expense_date_str)
-            except ValueError:
-                flash('Invalid date format for expense date.', 'error')
-                return redirect(url_for('add_expense', today_date=date.today().isoformat(), cards=all_cards))
-            linked_card_id = int(card_id) if card_id else None
-            new_expense = Expense(
-                description=description, amount_sgd=amount_sgd, category=category,
-                expense_date=expense_date, card_id=linked_card_id
-            )
-            db.session.add(new_expense)
-            db.session.commit()
-            flash('Expense added successfully!', 'success')
-            return redirect(url_for('expenses'))
-        today_date = date.today().isoformat()
-        return render_template('add_expense.html', today_date=today_date, cards=all_cards)
-    
-    @app.route('/edit_expense/<int:expense_id>', methods=['GET', 'POST'])
-    def edit_expense(expense_id):
-        expense = db.session.get(Expense, expense_id)
-        if not expense:
-            flash('Expense not found!', 'error')
-            return redirect(url_for('expenses'))
-        all_cards = Card.query.order_by(Card.name).all()
-        if request.method == 'POST':
-            expense.description = request.form['description']
-            expense.amount_sgd = float(request.form['amount_sgd'])
-            expense.category = request.form['category']
-            expense_date_str = request.form['expense_date']
-            try:
-                expense.expense_date = date.fromisoformat(expense_date_str)
-            except ValueError:
-                flash('Invalid date format for expense date.', 'error')
-                return redirect(url_for('edit_expense', expense_id=expense.id))
-            card_id = request.form.get('card_id')
-            expense.card_id = int(card_id) if card_id else None
-            db.session.commit()
-            flash('Expense updated successfully!', 'success')
-            return redirect(url_for('expenses'))
-        return render_template('edit_expense.html', expense=expense, cards=all_cards)
-
-    @app.route('/delete_expense/<int:expense_id>', methods=['POST'])
-    def delete_expense(expense_id):
-        expense = db.session.get(Expense, expense_id)
-        if not expense:
-            flash('Expense not found!', 'error')
-            return redirect(url_for('expenses'))
-        db.session.delete(expense)
-        db.session.commit()
-        flash('Expense deleted successfully!', 'success')
-        return redirect(url_for('expenses'))
 
     @app.route('/wishlist')
     def wishlist():
