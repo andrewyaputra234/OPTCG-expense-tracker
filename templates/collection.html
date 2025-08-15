@@ -66,6 +66,7 @@
                             <th scope="col">Quantity</th>
                             <th scope="col">Total Purchase Price (Original)</th>
                             <th scope="col">Price per Unit (¥)</th>
+                            <th scope="col">Live Price (JPY)</th>
                             <th scope="col" id="sortPriceSgd">
                                 Total Purchase Price (SGD) <span id="sortIcon"></span>
                             </th>
@@ -96,6 +97,10 @@
                                                 {% if card.original_currency != 'JPY' %}disabled{% endif %}>
                                         <span class="ms-2">= <span class="result-span-yen">0.00</span></span>
                                     </div>
+                            </td>
+                            <td class="live-price-cell">
+                                <button class="btn btn-sm btn-info live-price-btn" data-card-number="{{ card.set_name }}-{{ card.card_number }}">Get Live Price</button>
+                                <div class="live-prices-container mt-2"></div>
                             </td>
                             <td class="total-price-sgd-cell" data-sort-value="{{ (card.purchase_price_sgd * card.quantity)|round(2) }}">
                                 ${{ (card.purchase_price_sgd * card.quantity)|round(2) }}

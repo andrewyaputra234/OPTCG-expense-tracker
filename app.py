@@ -1,11 +1,17 @@
 import os
 import requests
 import json
-from flask import Flask, render_template, request, redirect, url_for, flash, g
+from flask import Flask, render_template, request, redirect, url_for, flash, g, jsonify
 from datetime import date
 from dotenv import load_dotenv
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
+from bs4 import BeautifulSoup
+
+# --- NEW IMPORTS FOR LIVE PRICING ---
+import re
+from playwright.sync_api import sync_playwright
+# --- END NEW IMPORTS ---
 
 load_dotenv()
 
@@ -36,6 +42,82 @@ def get_exchange_rate(from_currency, to_currency):
         print(f"Error parsing API response: {e}")
         return None
 # --- END NEW HELPER FUNCTION ---
+
+# --- UPDATED HELPER FUNCTION FOR LIVE PRICING ---
+def get_yuyutei_prices_by_card_number(card_number_raw):
+    """
+    Fetch all available prices for a card number from Yuyu-tei's search page.
+    
+    Args:
+        card_number_raw (str): e.g. 'OP01-025' or 'OP01-121'
+    Returns:
+        List[Dict] or None: A list of dictionaries with card details and prices.
+    """
+    try:
+        if '-' not in card_number_raw:
+            card_number_formatted = f"{card_number_raw[:4]}-{card_number_raw[4:]}"
+        else:
+            card_number_formatted = card_number_raw
+            
+        url = f"https://yuyu-tei.jp/sell/opc/s/search?search_word={card_number_formatted}"
+        
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.goto(url, wait_until='networkidle')
+
+            CARD_ITEM_SELECTOR = ".card-product"
+            
+            # Find all card products on the page that match the card number
+            matching_cards = page.locator(f"{CARD_ITEM_SELECTOR}").all()
+            
+            if not matching_cards:
+                print(f"Card '{card_number_formatted}' not found on Yuyu-tei search page.")
+                browser.close()
+                return None
+
+            results = []
+            for card_element in matching_cards:
+                # Use Playwright selectors to find the correct elements
+                # The name and card number are in a span with a specific class
+                name_and_number_element = card_element.locator("span.d-block.border")
+                # The price is in a strong tag
+                price_element = card_element.locator("strong")
+                # The rarity is in a span with the class "tag"
+                rarity_element = card_element.locator("span.tag")
+                
+                # Check if the extracted elements contain the correct card number to prevent false positives
+                if card_number_formatted not in name_and_number_element.text_content():
+                    continue
+
+                name_text = name_and_number_element.text_content().strip() if name_and_number_element.count() > 0 else "Unknown Name"
+                price_text = price_element.text_content().strip() if price_element.count() > 0 else "0"
+                rarity_text = rarity_element.text_content().strip() if rarity_element.count() > 0 else "Normal"
+
+                # Extract the price (digits only)
+                price_match = re.search(r'(\d{1,3}(?:,\d{3})*)', price_text)
+                price = int(price_match.group(1).replace(',', '')) if price_match else None
+                
+                results.append({
+                    'name': name_text,
+                    'card_number': card_number_formatted,
+                    'rarity': rarity_text,
+                    'price_yen': price
+                })
+            
+            browser.close()
+            
+            if not results:
+                print(f"No prices found for {card_number_formatted} after filtering.")
+                return None
+            
+            return results
+
+    except Exception as e:
+        print(f"Error fetching Yuyu-tei prices for '{card_number_formatted}': {e}")
+        return None
+# --- END UPDATED HELPER FUNCTION ---
+
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
@@ -105,6 +187,20 @@ def create_app(test_config=None):
             total_purchase_price_sgd=total_purchase_price_sgd,
             total_purchase_price_original=total_purchase_price_original
         )
+
+    # --- NEW LIVE PRICING ROUTE ---
+    @app.route('/get_live_price/<card_number>')
+    def get_live_price(card_number):
+        if not card_number:
+            return jsonify({'error': 'No card number provided'}), 400
+
+        live_prices = get_yuyutei_prices_by_card_number(card_number)
+        
+        if live_prices:
+            return jsonify({'prices': live_prices}), 200
+        else:
+            return jsonify({'error': 'Prices not found or scraping failed'}), 404
+    # --- END NEW LIVE PRICING ROUTE ---
 
     # --- NEW COLLECTION ROUTES ---
 
@@ -281,8 +377,10 @@ def create_app(test_config=None):
                         rate = get_exchange_rate(original_currency, 'SGD')
                         if rate:
                             purchase_price_sgd = purchase_price_original * rate
+                            flash(f"Converted {purchase_price_original} {original_currency} to {purchase_price_sgd:.2f} SGD.", "info")
                         else:
                             purchase_price_sgd = 0.0
+                            flash("Failed to get exchange rate, purchase price in SGD set to 0.0", "warning")
                     else:
                         purchase_price_sgd = purchase_price_original
 

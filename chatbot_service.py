@@ -46,16 +46,22 @@ def get_card_details_from_ai(user_description: str) -> Dict[str, Any]:
         ai_response_content = response.choices[0].message.content
         ai_card_data = json.loads(ai_response_content)
         
+        set_name = ai_card_data.get('set_name', '')
+        card_number = ai_card_data.get('card_number', '')
+
+        # Combine set name and card number if both exist
+        full_card_number = f"{set_name}-{card_number}" if set_name and card_number else card_number
+
         card_data = {
             'name': ai_card_data.get('name', 'Unknown Card'),
-            'set_name': ai_card_data.get('set_name', ''),
-            'card_number': ai_card_data.get('card_number', ''),
+            'set_name': set_name,
+            'card_number': full_card_number, # This is the updated field
             'rarity': ai_card_data.get('rarity', ''),
             'color': ai_card_data.get('color', ''),
             'quantity': ai_card_data.get('quantity', 1),
             'purchase_price_original': ai_card_data.get('purchase_price_original', 0.0),
             'original_currency': ai_card_data.get('original_currency', 'SGD'),
-            'purchase_date': date.today().isoformat(), # Always use today's date
+            'purchase_date': date.today().isoformat(),
             'image_url': ai_card_data.get('image_url', ''),
         }
 
@@ -136,9 +142,19 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
 
             # Ensure the output is always a list, even if the AI returned a single object
             if not isinstance(raw_card_data, list):
-                return [raw_card_data]
+                card_list = [raw_card_data]
             else:
-                return raw_card_data
+                card_list = raw_card_data
+            
+            # Loop through the list to format the card_number
+            for card in card_list:
+                set_name = card.get('set_name', '')
+                card_number = card.get('card_number', '')
+                if set_name and card_number:
+                    card['card_number'] = f"{set_name}-{card_number}"
+
+            return card_list
+
         else:
             return {"error": "AI response did not contain a valid JSON list or object."}
 
