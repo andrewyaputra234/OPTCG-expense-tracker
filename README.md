@@ -12,8 +12,7 @@ This is a Flask-based web application designed to help One Piece Card Game playe
 * **Collection Management:** Organize your cards into custom collections, such as "Trade Binder," "Personal Deck," or specific "Sale" lots.
 * **Intuitive Interface:** A clean, responsive user interface with a dedicated sidebar for navigating between collections.
 * **Wishlist Tracking:** Maintain a list of cards you want to acquire with target prices and priority levels.
-* **Expense Logging:** Track all expenses related to your card collection.
-
+* **Auto Total Sales tracking:** Adds total amount regardless of yuyutei conversion or SGD pricing.
 ## Installation and Setup
 
 Follow these steps to get the application up and running on your local machine.
