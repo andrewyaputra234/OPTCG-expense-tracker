@@ -393,12 +393,12 @@ h1, h2, h3, h4, h5, h6 {
     padding: 1.5rem;
     border-right: 1px solid var(--highlight-color);
     color: var(--primary-color);
+    vertical-align: middle;
 }
 
 .collection-table tr {
     background-color: var(--surface-color);
     border-radius: 8px;
-    /* Updated box-shadow for glowing border effect */
     box-shadow: 0 0 5px var(--highlight-color), 0 4px 8px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -417,6 +417,12 @@ h1, h2, h3, h4, h5, h6 {
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
     border-right: none;
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px; /* Adds space between buttons */
 }
 
 /*

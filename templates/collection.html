@@ -32,7 +32,8 @@
         </div>
 
         <div class="col-md-9">
-            <div class="main-content-card"> <h2 class="text-center mb-4">
+            <div class="main-content-card">
+                <h2 class="text-center mb-4">
                     {% if collection %}
                         {{ collection.name }} Collection
                     {% else %}
@@ -127,6 +128,7 @@
                     <h4 class="mt-2" id="totalWithMailingFeeContainer" style="display: none;">
                         Total with Mailing: <span id="totalPriceWithMailingSgd"></span>
                     </h4>
+                    <button id="generateMessageBtn" class="btn btn-primary mt-2">Generate Sale Message</button>
                 </div>
 
                 {% else %}

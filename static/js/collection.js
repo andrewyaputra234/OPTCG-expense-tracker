@@ -98,3 +98,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    const generateBtn = document.getElementById('generateMessageBtn');
+    const subtotalSpan = document.getElementById('subtotalPriceSgd');
+    const mailingFeeCheckbox = document.getElementById('mailingFeeCheckbox');
+    
+    // **IMPORTANT: Replace with your actual phone number and name**
+    const phoneNumber = '91275288';
+    const name = 'Andrew';
+
+    if (generateBtn) {
+        generateBtn.addEventListener('click', function() {
+            let totalPrice = parseFloat(subtotalSpan.getAttribute('data-base-price'));
+            let mailingText = '';
+            
+            if (mailingFeeCheckbox.checked) {
+                totalPrice += 3.50;
+                mailingText = '(inclusive of mailing)';
+            }
+
+            const message = `Hello, thanks for the support of my sales. If the above info in the picture is correct, please xfer $${totalPrice.toFixed(2)}${mailingText} to ${phoneNumber}(${name}) and provide me a screenshot + your mailing details.`;
+            
+            navigator.clipboard.writeText(message).then(() => {
+                alert('Sale message copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy the message. Please copy it manually:\n\n' + message);
+            });
+        });
+    }
+});
