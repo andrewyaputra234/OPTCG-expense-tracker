@@ -435,3 +435,16 @@ h1, h2, h3, h4, h5, h6 {
     padding: 2rem;
     margin-top: 2rem;
 }
+
+/*
+    Animated Dropdown
+*/
+#collectionSelector {
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#collectionSelector:focus {
+    border-color: var(--highlight-color);
+    outline: none;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}

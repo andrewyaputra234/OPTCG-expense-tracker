@@ -6,17 +6,19 @@
 <a href="{{ url_for('add_collection') }}" class="btn btn-primary mb-3">Create New Collection</a>
 
 {% if collections %}
-<div class="list-group">
+<div class="card-grid">
     {% for collection in collections %}
-    <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-        <div>
-            <h5 class="mb-1"><a href="{{ url_for('collection', collection_id=collection.id) }}">{{ collection.name }}</a></h5>
-            <p class="mb-1">{{ collection.description }}</p>
+    <div class="card">
+        <div class="card-content">
+            <h5 class="card-title mb-1">
+                <a href="{{ url_for('collection', collection_id=collection.id) }}">{{ collection.name }}</a>
+            </h5>
+            <p class="card-text">{{ collection.description }}</p>
         </div>
-        <div class="btn-group" role="group">
-            <a href="{{ url_for('edit_collection', collection_id=collection.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+        <div class="card-actions">
+            <a href="{{ url_for('edit_collection', collection_id=collection.id) }}" class="btn btn-outline-secondary">Edit</a>
             <form action="{{ url_for('delete_collection', collection_id=collection.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this collection? This will not delete the cards inside it, but they will no longer be associated with a collection.');">
-                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                <button type="submit" class="btn btn-danger">Delete</button>
             </form>
         </div>
     </div>
