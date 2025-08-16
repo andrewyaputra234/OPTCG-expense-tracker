@@ -80,7 +80,7 @@
                         <tr>
                             <td>{{ card.name }}</td>
                             <td>{{ card.set_name }}</td>
-                            <td>{{ card.card_number }}</td>
+                            <td>{{ card.card_number.replace(card.set_name + '-', '', 1) }}</td>
                             <td>{{ card.rarity }}</td>
                             <td>{{ card.color }}</td>
                             <td>{{ card.quantity }}</td>
@@ -100,7 +100,7 @@
                                     </div>
                             </td>
                             <td class="live-price-cell">
-                                <button class="btn btn-sm btn-info live-price-btn" data-card-number="{{ card.card_number }}">Get Live Price</button>
+                                <button class="btn btn-sm btn-info live-price-btn" data-card-number="{{ card.card_number.replace(card.set_name + '-', '', 1) }}">Get Live Price</button>
                                 <div class="live-prices-container mt-2"></div>
                             </td>
                             <td class="total-price-sgd-cell" data-sort-value="{{ (card.purchase_price_sgd * card.quantity)|round(2) }}">
