@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 from bs4 import BeautifulSoup
+from werkzeug.utils import secure_filename
+from typing import List
 
 # --- NEW IMPORTS FOR LIVE PRICING ---
 import re
@@ -328,50 +330,72 @@ def create_app(test_config=None):
         return render_template('add_card.html', today_date=today_date, collections=collections)
     # --- END OF MODIFIED `add_card` ROUTE ---
 
-    # --- MODIFIED `add_card_with_ai` ROUTE ---
+    # --- MODIFIED `add_card_with_ai` ROUTE TO HANDLE MULTIPLE FILES ---
     @app.route('/add_card_with_ai', methods=['GET', 'POST'])
     def add_card_with_ai():
-        # FIXED: Use absolute import
         from chatbot_service import get_card_details_from_ai_multimodal, generate_ai_confirmation_message
         
         if request.method == 'POST':
             user_description = request.form.get('card_description')
-            card_image = request.files.get('card_image')
             
+            # MODIFIED: Use getlist() to get a list of all uploaded files
+            uploaded_files = request.files.getlist('card_image')
+
             collection_id_str = request.form.get('collection_id')
             collection_id = int(collection_id_str) if collection_id_str else None
 
-            if not user_description and (not card_image or card_image.filename == ''):
-                flash("Please provide a card description or upload an image.", "error")
+            # MODIFIED: Check if any files were uploaded (and they have a name)
+            if not user_description and not any(file.filename for file in uploaded_files):
+                flash("Please provide a card description or upload at least one image.", "error")
                 return redirect(url_for('add_card_with_ai'))
 
-            image_path = None
-            if card_image and card_image.filename != '':
-                try:
-                    upload_folder = os.path.join(app.instance_path, 'uploads')
-                    os.makedirs(upload_folder, exist_ok=True)
-                    
-                    image_path = os.path.join(upload_folder, card_image.filename)
-                    card_image.save(image_path)
-                except Exception as e:
-                    flash(f"Error saving image: {e}", "error")
-                    return redirect(url_for('add_card_with_ai'))
-
-            card_data_list = get_card_details_from_ai_multimodal(user_description, image_path)
+            image_paths = []
             
-            if image_path and os.path.exists(image_path):
-                os.remove(image_path)
+            # NEW LOGIC: Loop through each file, save it, and collect the path
+            for card_image in uploaded_files:
+                if card_image and card_image.filename != '':
+                    try:
+                        upload_folder = os.path.join(app.instance_path, 'uploads')
+                        os.makedirs(upload_folder, exist_ok=True)
+                        
+                        # Use a secure filename to prevent malicious uploads
+                        filename = secure_filename(card_image.filename)
+                        image_path = os.path.join(upload_folder, filename)
+                        
+                        # Check if a file with the same name already exists to prevent overwriting
+                        if os.path.exists(image_path):
+                            # Append a unique identifier to the filename
+                            name, ext = os.path.splitext(filename)
+                            timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+                            filename = f"{name}_{timestamp}{ext}"
+                            image_path = os.path.join(upload_folder, filename)
+
+                        card_image.save(image_path)
+                        image_paths.append(image_path)
+                    except Exception as e:
+                        flash(f"Error saving image: {e}", "error")
+                        return redirect(url_for('add_card_with_ai'))
+
+            # MODIFIED: Pass the list of image paths to the multimodal function
+            card_data_list = get_card_details_from_ai_multimodal(user_description, image_paths)
+            
+            # Clean up the temporary image files
+            for path in image_paths:
+                if os.path.exists(path):
+                    os.remove(path)
 
             if isinstance(card_data_list, dict) and 'error' in card_data_list:
                 flash(f"Error from AI: {card_data_list['error']}", "error")
                 return redirect(url_for('add_card_with_ai'))
+            
+            if not isinstance(card_data_list, list) or not card_data_list:
+                flash("The AI did not return a list of cards. Please try a different image or description.", "error")
+                return redirect(url_for('add_card_with_ai'))
 
-            # NEW LOGIC: Iterate over the list of cards returned by the AI
             try:
                 for card_data in card_data_list:
-                    # Logic to calculate SGD price for each card
-                    purchase_price_original = card_data.get('purchase_price_original')
-                    original_currency = card_data.get('original_currency')
+                    purchase_price_original = card_data.get('purchase_price_original', 0.0)
+                    original_currency = card_data.get('original_currency', 'SGD')
 
                     if original_currency and original_currency != 'SGD':
                         rate = get_exchange_rate(original_currency, 'SGD')
@@ -384,7 +408,6 @@ def create_app(test_config=None):
                     else:
                         purchase_price_sgd = purchase_price_original
 
-                    # Create and add the new card object for each card in the list
                     new_card = Card(
                         name=card_data.get('name'), set_name=card_data.get('set_name'),
                         card_number=card_data.get('card_number'), rarity=card_data.get('rarity'),
@@ -392,7 +415,7 @@ def create_app(test_config=None):
                         purchase_price_original=purchase_price_original,
                         original_currency=original_currency,
                         purchase_price_sgd=purchase_price_sgd,
-                        current_value_sgd=float(card_data.get('current_value_sgd', 0.0)),
+                        current_value_sgd=float(card_data.get('live_price_jpy', 0.0)), # Use live price as current value
                         image_url=card_data.get('image_url'),
                         purchase_date=date.fromisoformat(card_data.get('purchase_date', date.today().isoformat())),
                         collection_id=collection_id
@@ -401,7 +424,6 @@ def create_app(test_config=None):
 
                 db.session.commit()
                 
-                # Generate a single confirmation message for all cards
                 confirmation_message = generate_ai_confirmation_message(card_data_list)
                 flash(confirmation_message, 'success')
                 
