@@ -1,5 +1,3 @@
-Markdown
-
 # One Piece TCG Expense Tracker
 
 ## Project Overview
@@ -9,7 +7,7 @@ This is a Flask-based web application designed to help One Piece Card Game playe
 ## Key Features
 
 * **Card Management:** Easily add, edit, and delete cards from your collection.
-* **AI-Powered Card Lookup:** Use AI to automatically fetch card details (name, set, card number, rarity) from an image or text input.
+* **AI-Powered Card Lookup:** Use AI to automatically fetch card details (name, set, card number, rarity) from **one or more images** or text input.
 * **Collection Organization:** Group your cards into custom collections (e.g., "Trade Binder," "Personal Deck," or a specific "Sale" lot).
 * **Multi-Currency Support:** Track original purchase prices in their native currency (e.g., JPY, USD) and view the converted value in SGD.
 * **Live Price Tracking:** Dynamically fetch and display live market prices for your cards.
