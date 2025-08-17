@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Price per Unit (Yen) Calculation Logic
+    // Price per Unit (Yen) Calculation Logic - FIXED
     const divisorInputs = document.querySelectorAll('.divisor-input-yen');
 
     divisorInputs.forEach(input => {
@@ -81,11 +81,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = this.closest('tr');
             const originalPrice = parseFloat(priceCell.dataset.originalPrice);
             const originalCurrency = priceCell.dataset.originalCurrency;
-            const sgdPrice = parseFloat(priceCell.dataset.sgdPrice);
-            const divisor = parseFloat(this.value);
-
-            const resultSpan = priceCell.querySelector('.result-span-yen');
+            
+            // CORRECT: Get the original SGD price from the data attribute on the total price cell
             const totalSgdCell = row.querySelector('.total-price-sgd-cell');
+            const sgdPrice = parseFloat(totalSgdCell.dataset.sortValue);
+
+            const divisor = parseFloat(this.value);
+            const resultSpan = priceCell.querySelector('.result-span-yen');
             
             if (originalCurrency === 'JPY') {
                 if (isNaN(divisor) || divisor === 0) {

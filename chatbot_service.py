@@ -217,19 +217,20 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
             else:
                 card_list = raw_card_data
             
-            # NEW LOGIC: Loop through the list to format the card_number and fetch live prices
             for card in card_list:
+                # --- NEW LOGIC: Override the quantity to 1 for each image ---
+                card['quantity'] = 1
+                # --- END NEW LOGIC ---
+
                 set_name = card.get('set_name', '')
                 card_number = card.get('card_number', '')
 
-                # Format the card number
                 if set_name and card_number:
                     full_card_number = f"{set_name}-{card_number.replace(f'{set_name}-', '')}"
                     card['card_number'] = full_card_number
                 else:
                     full_card_number = card_number
                 
-                # Fetch live prices for each identified card
                 if full_card_number:
                     prices = get_yuyutei_prices_by_card_number(full_card_number)
                     if prices:

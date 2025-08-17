@@ -59,20 +59,20 @@
                 <table class="collection-table" id="cardTable">
                     <thead>
                         <tr>
-                            <th scope="col">Name</th>
-                            <th scope="col">Set Name</th>
-                            <th scope="col">Card No.</th>
-                            <th scope="col">Rarity</th>
-                            <th scope="col">Color</th>
-                            <th scope="col">Quantity</th>
-                            <th scope="col">Total Purchase Price (Original)</th>
-                            <th scope="col">Price per Unit (¥)</th>
-                            <th scope="col">Live Price (JPY)</th>
-                            <th scope="col" id="sortPriceSgd">
-                                Total Purchase Price (SGD) <span id="sortIcon"></span>
+                            <th scope="col" style="width: 25%;">Name</th>
+                            <th scope="col" style="width: 15%;">Set Name</th>
+                            <th scope="col" style="width: 10%;">Card No.</th>
+                            <th scope="col" style="width: 10%;">Rarity</th>
+                            <th scope="col" style="width: 5%;">Color</th>
+                            <th scope="col" style="width: 5%;">Qty</th>
+                            <th scope="col" style="width: 10%;">Total (Org)</th>
+                            <th scope="col" style="width: 10%;">Per Unit (¥)</th>
+                            <th scope="col" style="width: 5%;">Live Price</th>
+                            <th scope="col" id="sortPriceSgd" style="width: 10%;">
+                                Total (SGD) <span id="sortIcon"></span>
                             </th>
-                            <th scope="col">Purchase Date</th>
-                            <th scope="col">Actions</th>
+                            <th scope="col" style="width: 10%;">Date</th>
+                            <th scope="col" style="width: 10%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -88,16 +88,16 @@
                             <td data-original-price="{{ (card.purchase_price_original|default(0) * card.quantity)|round(2) }}" 
                                 data-original-currency="{{ card.original_currency|default('SGD') }}"
                                 data-sgd-price="{{ (card.purchase_price_sgd|default(0) * card.quantity)|round(2) }}">
-                                    <div class="d-flex align-items-center">
-                                        <span class="me-2">÷</span>
-                                        <input type="number" 
-                                                class="form-control form-control-sm divisor-input-yen" 
-                                                style="width: 80px;" 
-                                                min="0.01" 
-                                                step="0.01"
-                                                {% if card.original_currency != 'JPY' %}disabled{% endif %}>
-                                        <span class="ms-2">= <span class="result-span-yen">0.00</span></span>
-                                    </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2">÷</span>
+                                    <input type="number" 
+                                            class="form-control form-control-sm divisor-input-yen" 
+                                            style="width: 80px;" 
+                                            min="0.01" 
+                                            step="0.01"
+                                            {% if card.original_currency != 'JPY' %}disabled{% endif %}>
+                                    <span class="ms-2">= <span class="result-span-yen">0.00</span></span>
+                                </div>
                             </td>
                             <td class="live-price-cell">
                                 <button class="btn btn-sm btn-info live-price-btn" data-card-number="{{ card.set_name }}-{{ card.card_number.replace(card.set_name + '-', '') }}">Get Live Price</button>

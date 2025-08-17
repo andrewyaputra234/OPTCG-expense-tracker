@@ -2,12 +2,12 @@
     Dark Theme Styling
 */
 :root {
-    --primary-color: #f0f0f0;          /* Light grey for text and highlights */
-    --secondary-color: #a0a0a0;        /* Mid-grey for secondary text */
-    --background-color: #1a1a1a;       /* Dark grey background */
-    --surface-color: #2a2a2a;          /* Darker grey for cards and containers */
-    --border-color: #3a3a3a;           /* Dark grey borders */
-    --highlight-color: #ffffff;        /* Pure white for glowing highlights */
+    --primary-color: #f0f0f0;         /* Light grey for text and highlights */
+    --secondary-color: #a0a0a0;       /* Mid-grey for secondary text */
+    --background-color: #1a1a1a;      /* Dark grey background */
+    --surface-color: #2a2a2a;         /* Darker grey for cards and containers */
+    --border-color: #3a3a3a;          /* Dark grey borders */
+    --highlight-color: #ffffff;       /* Pure white for glowing highlights */
 
     /* Monochrome-friendly flash message colors */
     --success-bg: #1e4620;
@@ -371,18 +371,18 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /*
-    Updated Table Styling for Boxed Rows
+    Updated Table Styling for Boxed Rows - FIXES OVERFLOW
 */
 .collection-table {
     border-collapse: separate;
-    border-spacing: 0 1rem;
+    border-spacing: 0; /* Changed from 1rem to 0 to prevent extra space between columns */
     width: 100%;
     margin-top: 2rem;
 }
 
 .collection-table th {
     color: var(--secondary-color);
-    padding: 0.5rem 1.5rem;
+    padding: 0.5rem 0.5rem; /* Reduced horizontal padding */
     text-align: left;
     border: none;
     font-weight: 500;
@@ -390,8 +390,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .collection-table td {
     background-color: var(--surface-color);
-    padding: 1.5rem;
-    border-right: 1px solid var(--highlight-color);
+    padding: 0.5rem; /* Reduced padding to make cells more compact */
+    border-right: 1px solid var(--border-color); /* Changed from highlight-color */
     color: var(--primary-color);
     vertical-align: middle;
 }
@@ -399,13 +399,14 @@ h1, h2, h3, h4, h5, h6 {
 .collection-table tr {
     background-color: var(--surface-color);
     border-radius: 8px;
-    box-shadow: 0 0 5px var(--highlight-color), 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 5px var(--border-color), 0 4px 8px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 1rem; /* Re-added margin to create space between rows */
 }
 
 .collection-table tr:hover {
     transform: translateY(-5px);
-    box-shadow: 0 0 15px var(--highlight-color), 0 8px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 15px var(--border-color), 0 8px 16px rgba(0, 0, 0, 0.3);
 }
 
 .collection-table td:first-child {
@@ -418,11 +419,8 @@ h1, h2, h3, h4, h5, h6 {
     border-bottom-right-radius: 8px;
     border-right: none;
     text-align: right;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 5px; /* Adds space between buttons */
+    vertical-align: middle;
+    /* Removed display: flex and its properties to fix layout */
 }
 
 /*
