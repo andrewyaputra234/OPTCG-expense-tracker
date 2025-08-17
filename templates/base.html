@@ -37,15 +37,6 @@
     </div>
     <main class="site-main">
         <div class="container">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <ul class="flashes">
-                        {% for category, message in messages %}
-                            <li class="{{ category }}">{{ message }}</li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-            {% endwith %}
             <div class="rotating-card-container">
                 <img src="{{ url_for('static', filename='images/image1.gif') }}" alt="Card GIF 1" class="rotating-card-image active">
                 <img src="{{ url_for('static', filename='images/image2.gif') }}" alt="Card GIF 2" class="rotating-card-image">

@@ -45,16 +45,6 @@
                     {% endif %}
                 </h2>
                 
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <ul class="flashes">
-                        {% for category, message in messages %}
-                            <li class="{{ category }}">{{ message }}</li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-                {% endwith %}
-
                 {% if cards %}
                 <table class="collection-table" id="cardTable">
                     <thead>
@@ -150,6 +140,15 @@
                 </div>
                 {% endif %}
             </div>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            {% endwith %}
         </div>
     </div>
 </div>
