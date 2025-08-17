@@ -1,28 +1,31 @@
-# One Piece Card Game (OPTCG) Expense Tracker
+Markdown
+
+# One Piece TCG Expense Tracker
 
 ## Project Overview
 
-This is a Flask-based web application designed to help One Piece Card Game players track their card collection, expenses, and wishlists. The application provides a simple interface to manage your card inventory, organize cards into custom collections, and monitor their value.
+This is a Flask-based web application designed to help One Piece Card Game players track and manage their card collections and associated expenses. It provides a simple, intuitive interface to organize your inventory, monitor card values, and generate sales messages.
 
 ## Key Features
 
 * **Card Management:** Easily add, edit, and delete cards from your collection.
-* **AI-Powered Card Lookup:** Use AI to automatically fetch card details like name, set, card number, and rarity from an image or text input.
-* **Multi-Currency Support:** Track the original purchase price of a card in its native currency (e.g., JPY, USD) and see its converted value in SGD.
-* **Collection Management:** Organize your cards into custom collections, such as "Trade Binder," "Personal Deck," or specific "Sale" lots.
-* **Intuitive Interface:** A clean, responsive user interface with a dedicated sidebar for navigating between collections.
-* **Wishlist Tracking:** Maintain a list of cards you want to acquire with target prices and priority levels.
-* **Auto Total Sales tracking:** Adds total amount regardless of yuyutei conversion or SGD pricing.
+* **AI-Powered Card Lookup:** Use AI to automatically fetch card details (name, set, card number, rarity) from an image or text input.
+* **Collection Organization:** Group your cards into custom collections (e.g., "Trade Binder," "Personal Deck," or a specific "Sale" lot).
+* **Multi-Currency Support:** Track original purchase prices in their native currency (e.g., JPY, USD) and view the converted value in SGD.
+* **Live Price Tracking:** Dynamically fetch and display live market prices for your cards.
+* **Sales Tracking:** Automatically calculates total sales based on your cards' purchase prices and allows for optional additions like a mailing fee.
+* **Intuitive Interface:** A clean, responsive user interface with a dedicated sidebar for easy navigation.
+
 ## Installation and Setup
 
 Follow these steps to get the application up and running on your local machine.
 
 ### 1. Clone the Repository
 
+```bash
 git clone <your-repository-url>
-cd OPTCG expense tracker
-
-### 2. Set Up a Virtual Environment
+cd one-piece-tcg-tracker
+2. Set Up a Virtual Environment
 It's recommended to use a virtual environment to manage project dependencies.
 
 Bash
@@ -40,15 +43,13 @@ On macOS/Linux:
 Bash
 
 source venv/bin/activate
-### 3. Install Dependencies
-Install all the required Python libraries.
+3. Install Dependencies
+Install all the required Python libraries using the requirements.txt file.
 
 Bash
 
 pip install -r requirements.txt
-(Note: If you don't have a requirements.txt file, you can create one by running pip freeze > requirements.txt after installing your libraries like Flask, Flask-SQLAlchemy, etc.)
-
-### 4. Set Up Environment Variables
+4. Set Up Environment Variables
 You will need to set a few environment variables for the application to run.
 
 On Windows (PowerShell):
@@ -65,7 +66,7 @@ export FLASK_APP=app.py
 export GOOGLE_API_KEY=YOUR_GOOGLE_GENERATIVE_AI_API_KEY
 Replace YOUR_GOOGLE_GENERATIVE_AI_API_KEY with your actual API key.
 
-### 5. Run the Application
+5. Run the Application
 Start the Flask development server.
 
 Bash
@@ -73,3 +74,20 @@ Bash
 flask run
 The application will be available at http://127.0.0.1:5000.
 
+How to Use
+Once the application is running, you can:
+
+Navigate to "My Collection" to view and manage your cards.
+
+Add a new card manually or use the "Add Card (AI)" feature to auto-populate card details from an image.
+
+Create new collections to sort your cards.
+
+Input the original purchase price in its currency, and the app will calculate the equivalent SGD value.
+
+On the "My Collection" page, you can enter any custom divisor to convert the total original price (e.g., in JPY) to your desired value in SGD. This allows for flexible currency conversion.
+
+The total SGD value is calculated automatically for your entire collection, with an option to add a mailing fee.
+
+Credits
+This project was built with the help of a conversational AI assistant.
