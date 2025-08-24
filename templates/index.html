@@ -3,7 +3,20 @@
 {% block title %}Home - One Piece TCG Tracker{% endblock %}
 
 {% block content %}
-    <h1>Welcome to Your One Piece TCG Collection Tracker!</h1>
-    <p>Manage your cards, track expenses, and monitor your collection's value.</p>
-    <p>Use the navigation above to get started.</p>
+<div class="hero-section">
+    <div class="rotating-gif-background">
+        <img src="{{ url_for('static', filename='images/image1.gif') }}" alt="Card GIF 1" class="rotating-card-image active">
+        <img src="{{ url_for('static', filename='images/image2.gif') }}" alt="Card GIF 2" class="rotating-card-image">
+        <img src="{{ url_for('static', filename='images/image3.gif') }}" alt="Card GIF 3" class="rotating-card-image">
+        <div class="background-overlay"></div>
+    </div>
+    <div class="hero-content">
+        <h1>Track Your Treasure, Master Your Collection.</h1>
+        <p>The ultimate tool for every One Piece TCG enthusiast. Log expenses, monitor card values, and complete your collection.</p>
+        <div class="cta-buttons">
+            <a href="{{ url_for('collections_list') }}" class="btn btn-primary">View Collections</a>
+            <a href="{{ url_for('add_card') }}" class="btn btn-secondary">Add a Card</a>
+        </div>
+    </div>
+</div>
 {% endblock %}
