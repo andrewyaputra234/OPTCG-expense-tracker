@@ -217,11 +217,23 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
             else:
                 card_list = raw_card_data
             
+            # NEW LOGIC: This new dictionary will store unique cards
+            final_card_map = {}
             for card in card_list:
-                # --- NEW LOGIC: Override the quantity to 1 for each image ---
-                card['quantity'] = 1
-                # --- END NEW LOGIC ---
+                # Use a unique key for each card based on its key properties
+                card_key = (card.get('name', ''), card.get('set_name', ''), card.get('card_number', ''))
+                
+                if card_key in final_card_map:
+                    # If the card already exists, just add to the quantity
+                    final_card_map[card_key]['quantity'] += card.get('quantity', 1)
+                else:
+                    # If it's a new card, add it to the map
+                    final_card_map[card_key] = card
+                    
+            final_card_list = list(final_card_map.values())
 
+            # Now, process the list for live prices and other formatting
+            for card in final_card_list:
                 set_name = card.get('set_name', '')
                 card_number = card.get('card_number', '')
 
@@ -241,8 +253,8 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
                         print(f"No live price found for {full_card_number}")
                 else:
                     card['live_price_jpy'] = 0
-
-            return card_list
+                        
+            return final_card_list
 
         else:
             return {"error": "AI response did not contain a valid JSON list or object."}
@@ -264,18 +276,20 @@ def generate_ai_confirmation_message(card_data_list: List[Dict[str, Any]]) -> st
         return "No card details to confirm."
 
     confirmation_messages = []
+    
     for card_data in card_data_list:
         card_name = card_data.get('name', 'a card')
         set_name = card_data.get('set_name', '')
         rarity = card_data.get('rarity', 'Parallel Art')
+        count = card_data.get('quantity', 1)
 
         if set_name:
             if 'Parallel' in rarity or 'Alt-Art' in rarity:
-                 confirmation_messages.append(f"Successfully added a {rarity} {card_name} from the {set_name} set to your collection.")
+                 confirmation_messages.append(f"Successfully added {count} {rarity} {card_name} from the {set_name} set to your collection.")
             else:
-                confirmation_messages.append(f"Successfully added a {card_name} from the {set_name} set to your collection.")
+                confirmation_messages.append(f"Successfully added {count} {card_name} from the {set_name} set to your collection.")
         else:
-            confirmation_messages.append(f"Successfully added a {card_name} to your collection.")
+            confirmation_messages.append(f"Successfully added {count} {card_name} to your collection.")
 
     return " ".join(confirmation_messages)
 
