@@ -7,7 +7,6 @@ from datetime import date
 import base64
 from typing import Dict, Any, List
 import re
-
 # --- NEW IMPORTS FOR LIVE PRICING ---
 from playwright.sync_api import sync_playwright
 # --- END NEW IMPORTS ---
@@ -16,7 +15,7 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-# --- ADDED HELPER FUNCTION FROM app.py ---
+# --- UPDATED HELPER FUNCTION FOR LIVE PRICING ---
 def get_yuyutei_prices_by_card_number(card_number_raw):
     """
     Fetch all available prices for a card number from Yuyu-tei's search page.
@@ -41,6 +40,7 @@ def get_yuyutei_prices_by_card_number(card_number_raw):
 
             CARD_ITEM_SELECTOR = ".card-product"
             
+            # Find all card products on the page that match the card number
             matching_cards = page.locator(f"{CARD_ITEM_SELECTOR}").all()
             
             if not matching_cards:
@@ -50,10 +50,15 @@ def get_yuyutei_prices_by_card_number(card_number_raw):
 
             results = []
             for card_element in matching_cards:
+                # Use Playwright selectors to find the correct elements
+                # The name and card number are in a span with a specific class
                 name_and_number_element = card_element.locator("span.d-block.border")
+                # The price is in a strong tag
                 price_element = card_element.locator("strong")
+                # The rarity is in a span with the class "tag"
                 rarity_element = card_element.locator("span.tag")
                 
+                # Check if the extracted elements contain the correct card number to prevent false positives
                 if card_number_formatted not in name_and_number_element.text_content():
                     continue
 
@@ -61,6 +66,7 @@ def get_yuyutei_prices_by_card_number(card_number_raw):
                 price_text = price_element.text_content().strip() if price_element.count() > 0 else "0"
                 rarity_text = rarity_element.text_content().strip() if rarity_element.count() > 0 else "Normal"
 
+                # Extract the price (digits only)
                 price_match = re.search(r'(\d{1,3}(?:,\d{3})*)', price_text)
                 price = int(price_match.group(1).replace(',', '')) if price_match else None
                 
@@ -82,7 +88,7 @@ def get_yuyutei_prices_by_card_number(card_number_raw):
     except Exception as e:
         print(f"Error fetching Yuyu-tei prices for '{card_number_formatted}': {e}")
         return None
-# --- END ADDED HELPER FUNCTION ---
+# --- END UPDATED HELPER FUNCTION ---
 
 # Your function for text-only input (unchanged, still returns a single card)
 def get_card_details_from_ai(user_description: str) -> Dict[str, Any]:
@@ -236,7 +242,11 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
             for card in final_card_list:
                 set_name = card.get('set_name', '')
                 card_number = card.get('card_number', '')
-
+                
+                 # --- ADD THIS NEW LINE RIGHT HERE ---
+                card['purchase_date'] = date.today().isoformat()
+                # ------------------------------------
+                
                 if set_name and card_number:
                     full_card_number = f"{set_name}-{card_number.replace(f'{set_name}-', '')}"
                     card['card_number'] = full_card_number
