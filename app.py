@@ -6,7 +6,6 @@ from datetime import date
 from dotenv import load_dotenv
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
-from bs4 import BeautifulSoup
 from werkzeug.utils import secure_filename
 from typing import List
 from chatbot_service import get_yuyutei_prices_by_card_number
@@ -51,7 +50,6 @@ def create_app(test_config=None):
         SECRET_KEY=os.getenv('SECRET_KEY', 'dev_secret_key'),
         SQLALCHEMY_DATABASE_URI='sqlite:///' + os.path.join(app.root_path, 'instance', 'one_piece_tcg.sqlite'),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        EXCHANGE_RATE_API_KEY=os.getenv('EXCHANGE_RATE_API_KEY'),
     )
 
     if test_config is None:

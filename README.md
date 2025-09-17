@@ -42,11 +42,12 @@ Bash
 
 source venv/bin/activate
 3. Install Dependencies
-Install all the required Python libraries using the requirements.txt file.
+Install all the required Python libraries using the requirements.txt file, then install Playwright browsers (for live pricing scraping).
 
 Bash
 
 pip install -r requirements.txt
+python -m playwright install chromium
 4. Set Up Environment Variables
 You will need to set a few environment variables for the application to run.
 
@@ -55,21 +56,21 @@ On Windows (PowerShell):
 PowerShell
 
 $env:FLASK_APP = "app.py"
-$env:GOOGLE_API_KEY = "YOUR_GOOGLE_GENERATIVE_AI_API_KEY"
+$env:OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"
 On macOS/Linux:
 
 Bash
 
 export FLASK_APP=app.py
-export GOOGLE_API_KEY=YOUR_GOOGLE_GENERATIVE_AI_API_KEY
-Replace YOUR_GOOGLE_GENERATIVE_AI_API_KEY with your actual API key.
+export OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+Replace YOUR_OPENAI_API_KEY with your actual API key.
 
 5. Run the Application
-Start the Flask development server.
+Start the Flask development server (the project uses an app factory).
 
 Bash
 
-flask run
+flask --app app:create_app run
 The application will be available at http://127.0.0.1:5000.
 
 How to Use
