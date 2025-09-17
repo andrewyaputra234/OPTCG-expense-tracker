@@ -249,7 +249,8 @@ def create_app(test_config=None):
 
         collections = Collection.query.order_by(Collection.name).all()
         today_date = date.today().isoformat()
-        return render_template('add_card.html', today_date=today_date, collections=collections)
+        selected_collection_id = request.args.get('collection_id')
+        return render_template('add_card.html', today_date=today_date, collections=collections, selected_collection_id=selected_collection_id)
     # --- END OF MODIFIED `add_card` ROUTE ---
 
     # --- MODIFIED `add_card_with_ai` ROUTE TO HANDLE MULTIPLE FILES ---
@@ -360,7 +361,8 @@ def create_app(test_config=None):
                 return redirect(url_for('add_card_with_ai'))
         
         collections = Collection.query.order_by(Collection.name).all()
-        return render_template('add_card_with_ai.html', collections=collections)
+        selected_collection_id = request.args.get('collection_id')
+        return render_template('add_card_with_ai.html', collections=collections, selected_collection_id=selected_collection_id)
     # --- END OF MODIFIED `add_card_with_ai` ROUTE ---
 
     @app.route('/edit_card/<int:card_id>', methods=['GET', 'POST'])

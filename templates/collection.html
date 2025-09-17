@@ -44,6 +44,12 @@
                         My Card Collection
                     {% endif %}
                 </h2>
+                {% if collection %}
+                <div class="d-flex justify-content-end mb-3" style="gap: 10px;">
+                    <a class="btn btn-primary btn-sm" href="{{ url_for('add_card', collection_id=collection.id) }}">Add Card</a>
+                    <a class="btn btn-primary btn-sm" href="{{ url_for('add_card_with_ai', collection_id=collection.id) }}">Add with AI</a>
+                </div>
+                {% endif %}
                 
                 {% if cards %}
                 <table class="collection-table" id="cardTable">

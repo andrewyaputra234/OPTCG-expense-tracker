@@ -10,35 +10,26 @@
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_style.css') }}">
+    
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/charts.js') }}" defer></script>
 </head>
 <body>
-    <div class="overlay overlay-slide-left" id="overlay">
-        <nav>
-            <ul>
-                <li id="nav-1" class="slide-out-1">
-                    <a href="{{ url_for('collections_list') }}">Collections</a>
-                </li>
-                <li id="nav-2" class="slide-out-2">
-                    <a href="{{ url_for('collection') }}">My Collection</a>
-                </li>
-                <li id="nav-3" class="slide-out-3">
-                    <a href="{{ url_for('add_card') }}">Add Card</a>
-                </li>
-                <li id="nav-4" class="slide-out-4">
-                    <a href="{{ url_for('add_card_with_ai') }}">Add Card (AI)</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-    <div class="hamburger-menu" id="hamburger-menu">
-        <div class="menu-bar1"></div>
-        <div class="menu-bar2"></div>
-        <div class="menu-bar3"></div>
-    </div>
+    <header class="site-header">
+        <div class="header-container">
+            <h1 class="site-title"><a href="{{ url_for('index') }}">One Piece TCG Tracker</a></h1>
+            <nav class="site-nav">
+                <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Home</a>
+                <a href="{{ url_for('collections_list') }}" class="{% if request.endpoint in ['collections_list'] %}active{% endif %}">Collections</a>
+                <a href="{{ url_for('collection') }}" class="{% if request.endpoint in ['collection'] %}active{% endif %}">My Collection</a>
+                <a href="{{ url_for('add_card') }}" class="{% if request.endpoint == 'add_card' %}active{% endif %}">Add Card</a>
+                <a href="{{ url_for('add_card_with_ai') }}" class="{% if request.endpoint == 'add_card_with_ai' %}active{% endif %}">Add Card (AI)</a>
+                <a href="{{ url_for('wishlist') }}" class="{% if request.endpoint in ['wishlist','add_wishlist_item','edit_wishlist_item'] %}active{% endif %}">Wishlist</a>
+            </nav>
+        </div>
+    </header>
+    
     <main class="site-main">
         <div class="container">
             {% block content %}{% endblock %}
@@ -51,7 +42,7 @@
         </div>
     </footer>
 
-    <script src="{{ url_for('static', filename='js/nav_script.js') }}" defer></script>
+    
     
 </body>
 </html>
