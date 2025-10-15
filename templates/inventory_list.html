@@ -12,6 +12,9 @@
                     <a href="{{ url_for('inventory.add_inventory_card') }}" class="btn btn-primary me-2">
                         <i class="fas fa-plus"></i> Add Card
                     </a>
+                    <a href="{{ url_for('inventory.add_inventory_card_with_ai') }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-robot"></i> Add Card (AI)
+                    </a>
                     <form method="POST" action="{{ url_for('inventory.update_all_prices') }}" class="d-inline">
                         <button type="submit" class="btn btn-success me-2" onclick="return confirm('This will update prices for all cards. Continue?')">
                             <i class="fas fa-sync-alt"></i> Update All Prices
@@ -37,7 +40,8 @@
                     <div class="card bg-info text-white">
                         <div class="card-body">
                             <h5 class="card-title">Purchase Value</h5>
-                            <h3>${{ "%.2f"|format(total_purchase_value) }}</h3>
+                            {% set total_purchase_value_yen = cards|sum(attribute='purchase_price_yen') %}
+                            <h3>¥{{ "{:,.0f}".format(total_purchase_value_yen) }}</h3>
                         </div>
                     </div>
                 </div>
@@ -45,18 +49,21 @@
                     <div class="card bg-secondary text-white">
                         <div class="card-body">
                             <h5 class="card-title">Current Value</h5>
-                            <h3>${{ "%.2f"|format(total_current_value) }}</h3>
+                            {% set total_current_value_yen = cards|sum(attribute='current_price_yen') %}
+                            <h3>¥{{ "{:,.0f}".format(total_current_value_yen) }}</h3>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card {% if total_gain_loss >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
+                    {% set total_gain_loss_yen = total_current_value_yen - total_purchase_value_yen %}
+                    {% set total_gain_loss_percentage_yen = (total_gain_loss_yen / total_purchase_value_yen * 100) if total_purchase_value_yen > 0 else 0 %}
+                    <div class="card {% if total_gain_loss_yen >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
                         <div class="card-body">
                             <h5 class="card-title">P&L</h5>
                             <h3>
-                                {% if total_gain_loss >= 0 %}+{% endif %}${{ "%.2f"|format(total_gain_loss) }}
+                                {% if total_gain_loss_yen >= 0 %}+{% endif %}¥{{ "{:,.0f}".format(total_gain_loss_yen) }}
                                 <small class="d-block">
-                                    ({% if total_gain_loss_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(total_gain_loss_percentage) }}%)
+                                    ({% if total_gain_loss_percentage_yen >= 0 %}+{% endif %}{{ "%.1f"|format(total_gain_loss_percentage_yen) }}%)
                                 </small>
                             </h3>
                         </div>
@@ -111,13 +118,15 @@
                                         </span>
                                     </td>
                                     <td>{{ card.quantity }}</td>
-                                    <td>${{ "%.2f"|format(card.purchase_price_sgd) }}</td>
-                                    <td>${{ "%.2f"|format(card.current_price_sgd) }}</td>
-                                    <td>${{ "%.2f"|format(card.current_price_sgd * card.quantity) }}</td>
+                                    <td>¥{{ "{:,.0f}".format(card.purchase_price_yen) }}</td>
+                                    <td>¥{{ "{:,.0f}".format(card.current_price_yen) }}</td>
+                                    <td>¥{{ "{:,.0f}".format(card.current_price_yen * card.quantity) }}</td>
                                     <td>
-                                        <span class="{% if individual_gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                            {% if individual_gain_loss >= 0 %}+{% endif %}${{ "%.2f"|format(individual_gain_loss) }}
-                                            <br><small>({% if individual_gain_loss_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(individual_gain_loss_percentage) }}%)</small>
+                                        {% set individual_gain_loss_yen = (card.current_price_yen - card.purchase_price_yen) * card.quantity %}
+                                        {% set individual_gain_loss_percentage_yen = ((card.current_price_yen - card.purchase_price_yen) / card.purchase_price_yen * 100) if card.purchase_price_yen > 0 else 0 %}
+                                        <span class="{% if individual_gain_loss_yen >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                            {% if individual_gain_loss_yen >= 0 %}+{% endif %}¥{{ "{:,.0f}".format(individual_gain_loss_yen) }}
+                                            <br><small>({% if individual_gain_loss_percentage_yen >= 0 %}+{% endif %}{{ "%.1f"|format(individual_gain_loss_percentage_yen) }}%)</small>
                                         </span>
                                     </td>
                                     <td>

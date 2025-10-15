@@ -105,12 +105,11 @@
                     <div class="row text-center">
                         <div class="col-6">
                             <h6 class="text-muted">Current Price</h6>
-                            <h4 class="text-primary">¥{{ card.current_price_yen|int }}</h4>
-                            <p class="text-primary mb-0">${{ "%.2f"|format(card.current_price_sgd) }}</p>
+                            <h4 class="text-primary">¥{{ "{:,.0f}".format(card.current_price_yen) }}</h4>
                         </div>
                         <div class="col-6">
                             <h6 class="text-muted">Total Value</h6>
-                            <h4 class="text-success">${{ "%.2f"|format(card.current_price_sgd * card.quantity) }}</h4>
+                            <h4 class="text-success">¥{{ "{:,.0f}".format(card.current_price_yen * card.quantity) }}</h4>
                             <p class="text-muted mb-0">{{ card.quantity }} cards</p>
                         </div>
                     </div>
@@ -134,14 +133,14 @@
                     <h5 class="mb-0">Performance</h5>
                 </div>
                 <div class="card-body">
-                    {% set individual_gain_loss = (card.current_price_sgd - card.purchase_price_sgd) * card.quantity %}
-                    {% set individual_gain_loss_percentage = ((card.current_price_sgd - card.purchase_price_sgd) / card.purchase_price_sgd * 100) if card.purchase_price_sgd > 0 else 0 %}
+                    {% set individual_gain_loss = (card.current_price_yen - card.purchase_price_yen) * card.quantity %}
+                    {% set individual_gain_loss_percentage = ((card.current_price_yen - card.purchase_price_yen) / card.purchase_price_yen * 100) if card.purchase_price_yen > 0 else 0 %}
                     
                     <div class="row text-center">
                         <div class="col-12 mb-3">
                             <h6 class="text-muted">Profit/Loss</h6>
                             <h3 class="{% if individual_gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                {% if individual_gain_loss >= 0 %}+{% endif %}${{ "%.2f"|format(individual_gain_loss) }}
+                                {% if individual_gain_loss >= 0 %}+{% endif %}¥{{ "{:,.0f}".format(individual_gain_loss) }}
                             </h3>
                             <p class="{% if individual_gain_loss_percentage >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
                                 {% if individual_gain_loss_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(individual_gain_loss_percentage) }}%
@@ -154,11 +153,11 @@
                     <div class="row">
                         <div class="col-6 text-center">
                             <h6 class="text-muted">Purchase Price</h6>
-                            <p class="mb-0">${{ "%.2f"|format(card.purchase_price_sgd) }}</p>
+                            <p class="mb-0">¥{{ "{:,.0f}".format(card.purchase_price_yen) }}</p>
                         </div>
                         <div class="col-6 text-center">
                             <h6 class="text-muted">Total Invested</h6>
-                            <p class="mb-0">${{ "%.2f"|format(card.purchase_price_sgd * card.quantity) }}</p>
+                            <p class="mb-0">¥{{ "{:,.0f}".format(card.purchase_price_yen * card.quantity) }}</p>
                         </div>
                     </div>
                 </div>
@@ -173,18 +172,18 @@
                     <div class="row">
                         <div class="col-6 text-center">
                             <h6 class="text-muted">Highest</h6>
-                            <p class="text-success mb-0">${{ "%.2f"|format(highest_price) }}</p>
+                            <p class="text-success mb-0">¥{{ "{:,.0f}".format(highest_price) }}</p>
                         </div>
                         <div class="col-6 text-center">
                             <h6 class="text-muted">Lowest</h6>
-                            <p class="text-danger mb-0">${{ "%.2f"|format(lowest_price) }}</p>
+                            <p class="text-danger mb-0">¥{{ "{:,.0f}".format(lowest_price) }}</p>
                         </div>
                     </div>
                     <hr>
                     <div class="text-center">
                         <h6 class="text-muted">30-Day Change</h6>
                         <p class="{% if price_change >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
-                            {% if price_change >= 0 %}+{% endif %}${{ "%.2f"|format(price_change) }}
+                            {% if price_change >= 0 %}+{% endif %}¥{{ "{:,.0f}".format(price_change) }}
                             ({% if price_change_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(price_change_percentage) }}%)
                         </p>
                     </div>

@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Add Card to Inventory (AI){% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-robot"></i> Add Card to Inventory with AI
+                    </h4>
+                    <small class="text-muted">Upload card images or provide descriptions for automatic analysis</small>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="card_image" class="form-label">
+                                        <i class="fas fa-images"></i> Card Images
+                                    </label>
+                                    <input type="file" class="form-control" id="card_image" name="card_image" 
+                                           multiple accept="image/*">
+                                    <div class="form-text">
+                                        Upload one or more card images for AI analysis. Supports JPG, PNG, etc.
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <span class="badge bg-secondary me-2">OR</span>
+                                        <small class="text-muted">Provide a description instead</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="card_description" class="form-label">
+                                        <i class="fas fa-align-left"></i> Card Description
+                                    </label>
+                                    <textarea class="form-control" id="card_description" name="card_description" 
+                                              rows="6" placeholder="Describe the card(s) you want to add. Include details like:
+- Card name (e.g., Monkey D. Luffy)
+- Card number (e.g., OP01-025)
+- Set name (e.g., Romance Dawn)
+- Rarity (SR, R, UC, C)
+- Purchase price (¥800)
+- Quantity owned
+- Any other relevant details..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- AI Processing Info -->
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-magic"></i> How AI Analysis Works</h6>
+                            <ul class="mb-0">
+                                <li><strong>Image Analysis:</strong> AI will identify card name, number, rarity, and other visible details</li>
+                                <li><strong>Live Pricing:</strong> Automatically fetches current market prices from Yuyu-tei</li>
+                                <li><strong>Price History:</strong> Starts tracking price changes from the moment you add the card</li>
+                                <li><strong>Multiple Cards:</strong> Can process multiple cards from a single image or description</li>
+                            </ul>
+                        </div>
+
+                        <!-- Preview Area -->
+                        <div id="imagePreview" class="row mb-3" style="display: none;">
+                            <div class="col-12">
+                                <h6>Selected Images:</h6>
+                                <div id="previewContainer" class="d-flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('inventory.inventory_list') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Inventory
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-robot"></i> Analyze & Add to Inventory
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tips Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Tips for Best Results</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Image Upload Tips:</h6>
+                            <ul class="small">
+                                <li>Use clear, well-lit photos</li>
+                                <li>Ensure card text is readable</li>
+                                <li>Include the full card in frame</li>
+                                <li>Avoid glare or shadows</li>
+                                <li>Multiple cards in one image are supported</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Description Tips:</h6>
+                            <ul class="small">
+                                <li>Include card number for accurate identification</li>
+                                <li>Specify purchase price in Japanese Yen (¥)</li>
+                                <li>Mention quantity if more than 1</li>
+                                <li>Include any special notes or conditions</li>
+                                <li>Use format: "OP01-025 Monkey D. Luffy SR ¥800"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Process Flow -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-cogs"></i> What Happens Next</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <div class="text-primary mb-2">
+                                <i class="fas fa-eye fa-2x"></i>
+                            </div>
+                            <h6>1. AI Analysis</h6>
+                            <small class="text-muted">Identifies cards from images/text</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-success mb-2">
+                                <i class="fas fa-search-dollar fa-2x"></i>
+                            </div>
+                            <h6>2. Price Lookup</h6>
+                            <small class="text-muted">Fetches live prices from Yuyu-tei</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-info mb-2">
+                                <i class="fas fa-database fa-2x"></i>
+                            </div>
+                            <h6>3. Add to Inventory</h6>
+                            <small class="text-muted">Creates inventory records</small>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-warning mb-2">
+                                <i class="fas fa-chart-line fa-2x"></i>
+                            </div>
+                            <h6>4. Start Tracking</h6>
+                            <small class="text-muted">Begins daily price monitoring</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('card_image');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewContainer = document.getElementById('previewContainer');
+    const submitBtn = document.getElementById('submitBtn');
+    const form = document.querySelector('form');
+
+    // Image preview functionality
+    fileInput.addEventListener('change', function(e) {
+        previewContainer.innerHTML = '';
+        
+        if (e.target.files.length > 0) {
+            imagePreview.style.display = 'block';
+            
+            Array.from(e.target.files).forEach((file, index) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'img-thumbnail';
+                        img.style.maxWidth = '120px';
+                        img.style.maxHeight = '120px';
+                        img.title = file.name;
+                        
+                        const div = document.createElement('div');
+                        div.className = 'text-center';
+                        div.appendChild(img);
+                        
+                        const filename = document.createElement('small');
+                        filename.textContent = file.name.length > 15 ? 
+                            file.name.substring(0, 12) + '...' : file.name;
+                        filename.className = 'd-block text-muted mt-1';
+                        div.appendChild(filename);
+                        
+                        previewContainer.appendChild(div);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        } else {
+            imagePreview.style.display = 'none';
+        }
+    });
+
+    // Form submission handling
+    form.addEventListener('submit', function(e) {
+        const description = document.getElementById('card_description').value.trim();
+        const files = fileInput.files;
+        
+        if (!description && files.length === 0) {
+            e.preventDefault();
+            alert('Please provide either a card description or upload at least one image.');
+            return false;
+        }
+        
+        // Show loading state
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+        submitBtn.disabled = true;
+        
+        // Re-enable after 30 seconds as failsafe
+        setTimeout(() => {
+            submitBtn.innerHTML = '<i class="fas fa-robot"></i> Analyze & Add to Inventory';
+            submitBtn.disabled = false;
+        }, 30000);
+    });
+
+    // File size validation
+    fileInput.addEventListener('change', function(e) {
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        let totalSize = 0;
+        
+        Array.from(e.target.files).forEach(file => {
+            totalSize += file.size;
+        });
+        
+        if (totalSize > maxSize) {
+            alert('Total file size exceeds 10MB. Please select smaller images.');
+            e.target.value = '';
+            imagePreview.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

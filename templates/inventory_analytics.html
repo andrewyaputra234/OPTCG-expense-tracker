@@ -28,7 +28,7 @@
                     <div class="card bg-info text-white">
                         <div class="card-body text-center">
                             <h5 class="card-title">Total Invested</h5>
-                            <h2>${{ "%.2f"|format(total_purchase_value) }}</h2>
+                            <h2>¥{{ "{:,.0f}".format(total_purchase_value) }}</h2>
                             <small>Original purchase amount</small>
                         </div>
                     </div>
@@ -37,7 +37,7 @@
                     <div class="card bg-secondary text-white">
                         <div class="card-body text-center">
                             <h5 class="card-title">Current Value</h5>
-                            <h2>${{ "%.2f"|format(total_current_value) }}</h2>
+                            <h2>¥{{ "{:,.0f}".format(total_current_value) }}</h2>
                             <small>Based on latest prices</small>
                         </div>
                     </div>
@@ -49,7 +49,7 @@
                         <div class="card-body text-center">
                             <h5 class="card-title">Total P&L</h5>
                             <h2>
-                                {% if total_gain_loss >= 0 %}+{% endif %}${{ "%.2f"|format(total_gain_loss) }}
+                                {% if total_gain_loss >= 0 %}+{% endif %}¥{{ "{:,.0f}".format(total_gain_loss) }}
                             </h2>
                             <small>
                                 {% if total_gain_loss_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(total_gain_loss_percentage) }}%
@@ -89,7 +89,7 @@
                                                     <br><small class="text-muted">{{ performance.card.card_number }}</small>
                                                 </td>
                                                 <td class="text-success">
-                                                    +${{ "%.2f"|format(performance.gain_loss) }}
+                                                    +¥{{ "{:,.0f}".format(performance.gain_loss) }}
                                                 </td>
                                                 <td class="text-success">
                                                     +{{ "%.1f"|format(performance.gain_loss_percentage) }}%
@@ -135,7 +135,7 @@
                                                     <br><small class="text-muted">{{ performance.card.card_number }}</small>
                                                 </td>
                                                 <td class="text-danger">
-                                                    ${{ "%.2f"|format(performance.gain_loss) }}
+                                                    ¥{{ "{:,.0f}".format(performance.gain_loss) }}
                                                 </td>
                                                 <td class="text-danger">
                                                     {{ "%.1f"|format(performance.gain_loss_percentage) }}%
@@ -165,14 +165,14 @@
                                 <div class="col-md-4">
                                     <div class="text-center">
                                         <h6 class="text-muted">Average Card Value</h6>
-                                        <h4>${{ "%.2f"|format(total_current_value / total_cards) if total_cards > 0 else 0 }}</h4>
+                                        <h4>¥{{ "{:,.0f}".format(total_current_value / total_cards) if total_cards > 0 else 0 }}</h4>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="text-center">
                                         <h6 class="text-muted">Most Valuable Card</h6>
                                         {% if top_gainers %}
-                                            <h4>${{ "%.2f"|format(top_gainers[0].card.current_price_sgd) }}</h4>
+                                            <h4>¥{{ "{:,.0f}".format(top_gainers[0].card.current_price_yen) }}</h4>
                                             <small class="text-muted">{{ top_gainers[0].card.name }}</small>
                                         {% else %}
                                             <h4>-</h4>
@@ -203,9 +203,14 @@
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-md-3">
-                                    <a href="{{ url_for('inventory.add_inventory_card') }}" class="btn btn-primary w-100">
-                                        <i class="fas fa-plus"></i><br>Add New Card
-                                    </a>
+                                    <div class="btn-group-vertical w-100" role="group">
+                                        <a href="{{ url_for('inventory.add_inventory_card') }}" class="btn btn-primary">
+                                            <i class="fas fa-plus"></i> Add New Card
+                                        </a>
+                                        <a href="{{ url_for('inventory.add_inventory_card_with_ai') }}" class="btn btn-outline-primary">
+                                            <i class="fas fa-robot"></i> Add with AI
+                                        </a>
+                                    </div>
                                 </div>
                                 <div class="col-md-3">
                                     <form method="POST" action="{{ url_for('inventory.update_all_prices') }}" class="w-100">

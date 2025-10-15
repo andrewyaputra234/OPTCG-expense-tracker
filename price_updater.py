@@ -10,8 +10,8 @@ from app import create_app
 from models import db, InventoryCard, PriceHistory
 from chatbot_service import get_yuyutei_prices_by_card_number
 
-# Exchange rate (you might want to fetch this dynamically)
-JPY_TO_SGD_RATE = 0.009
+# Exchange rate (updated to more current rate)  
+JPY_TO_SGD_RATE = 0.0086  # More accurate JPY to SGD rate as of 2024/2025
 
 def update_all_card_prices():
     """Update prices for all inventory cards and add to price history"""
@@ -32,8 +32,16 @@ def update_all_card_prices():
                 price_data = get_yuyutei_prices_by_card_number(card.card_number)
                 
                 if price_data and len(price_data) > 0:
-                    current_price_yen = price_data[0].get('price_yen', 0)
-                    current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
+                    # Filter for reasonable prices (between ¥50 and ¥50000)
+                    valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
+                    
+                    if valid_prices:
+                        current_price_yen = valid_prices[0].get('price_yen', 0)
+                        current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
+                    else:
+                        print(f"  No valid prices found for {card.card_number} (prices out of range)")
+                        error_count += 1
+                        continue
                     
                     # Update card's current price
                     card.current_price_yen = current_price_yen

@@ -7,25 +7,25 @@ import re
 
 inventory_bp = Blueprint('inventory', __name__, template_folder='../templates')
 
-# Exchange rate (you might want to fetch this dynamically)
-JPY_TO_SGD_RATE = 0.009
+# Exchange rate (updated to more current rate)
+JPY_TO_SGD_RATE = 0.0086  # More accurate JPY to SGD rate as of 2024/2025
 
 @inventory_bp.route('/')
 def inventory_list():
     """Display all inventory cards with current values and trends"""
     cards = InventoryCard.query.order_by(InventoryCard.name).all()
     
-    # Calculate totals
-    total_purchase_value_sgd = sum(card.purchase_price_sgd * card.quantity for card in cards)
-    total_current_value_sgd = sum(card.current_price_sgd * card.quantity for card in cards)
-    total_gain_loss = total_current_value_sgd - total_purchase_value_sgd
-    total_gain_loss_percentage = (total_gain_loss / total_purchase_value_sgd * 100) if total_purchase_value_sgd > 0 else 0
+    # Calculate totals in JPY
+    total_purchase_value_yen = sum(card.purchase_price_yen * card.quantity for card in cards)
+    total_current_value_yen = sum(card.current_price_yen * card.quantity for card in cards)
+    total_gain_loss_yen = total_current_value_yen - total_purchase_value_yen
+    total_gain_loss_percentage = (total_gain_loss_yen / total_purchase_value_yen * 100) if total_purchase_value_yen > 0 else 0
     
     return render_template('inventory_list.html', 
                          cards=cards,
-                         total_purchase_value=total_purchase_value_sgd,
-                         total_current_value=total_current_value_sgd,
-                         total_gain_loss=total_gain_loss,
+                         total_purchase_value_yen=total_purchase_value_yen,
+                         total_current_value_yen=total_current_value_yen,
+                         total_gain_loss_yen=total_gain_loss_yen,
                          total_gain_loss_percentage=total_gain_loss_percentage)
 
 @inventory_bp.route('/add', methods=['GET', 'POST'])
@@ -44,10 +44,19 @@ def add_inventory_card():
             price_data = get_yuyutei_prices_by_card_number(card_number)
             
             if price_data and len(price_data) > 0:
-                # Use the first result (you might want to let user choose if multiple)
-                card_info = price_data[0]
-                current_price_yen = card_info.get('price_yen', 0)
-                current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
+                # Filter for reasonable prices (between ¥50 and ¥50000)
+                valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
+                
+                if valid_prices:
+                    # Use the first valid result
+                    card_info = valid_prices[0]
+                    current_price_yen = card_info.get('price_yen', 0)
+                    current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
+                else:
+                    # No valid prices found, use original data but set price to 0
+                    card_info = price_data[0]
+                    current_price_yen = 0
+                    current_price_sgd = 0
                 
                 # Create inventory card
                 new_card = InventoryCard(
@@ -89,6 +98,150 @@ def add_inventory_card():
     
     return render_template('add_inventory_card.html')
 
+@inventory_bp.route('/add_with_ai', methods=['GET', 'POST'])
+def add_inventory_card_with_ai():
+    """Add cards to inventory using AI image analysis"""
+    if request.method == 'POST':
+        from chatbot_service import get_card_details_from_ai_multimodal
+        import os
+        from werkzeug.utils import secure_filename
+        
+        user_description = request.form.get('card_description', '').strip()
+        uploaded_files = request.files.getlist('card_image')
+        
+        # Validate input
+        if not user_description and not any(file.filename for file in uploaded_files):
+            flash("Please provide a card description or upload at least one image.", "error")
+            return redirect(url_for('inventory.add_inventory_card_with_ai'))
+        
+        # Process uploaded images
+        image_paths = []
+        try:
+            for card_image in uploaded_files:
+                if card_image and card_image.filename != '':
+                    # Create upload directory
+                    from flask import current_app
+                    upload_folder = os.path.join(current_app.instance_path, 'uploads')
+                    os.makedirs(upload_folder, exist_ok=True)
+                    
+                    # Save file securely
+                    filename = secure_filename(card_image.filename)
+                    if os.path.exists(os.path.join(upload_folder, filename)):
+                        # Add timestamp to avoid conflicts
+                        name, ext = os.path.splitext(filename)
+                        timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+                        filename = f"{name}_{timestamp}{ext}"
+                    
+                    image_path = os.path.join(upload_folder, filename)
+                    card_image.save(image_path)
+                    image_paths.append(image_path)
+            
+            # Get card details from AI
+            card_data_list = get_card_details_from_ai_multimodal(user_description, image_paths)
+            
+            # Clean up temporary files
+            for path in image_paths:
+                if os.path.exists(path):
+                    os.remove(path)
+            
+            # Handle AI response errors
+            if isinstance(card_data_list, dict) and 'error' in card_data_list:
+                flash(f"AI Error: {card_data_list['error']}", "error")
+                return redirect(url_for('inventory.add_inventory_card_with_ai'))
+            
+            if not isinstance(card_data_list, list) or not card_data_list:
+                flash("AI could not identify any cards. Please try a different image or description.", "error")
+                return redirect(url_for('inventory.add_inventory_card_with_ai'))
+            
+            # Process each card identified by AI
+            added_cards = []
+            for card_data in card_data_list:
+                try:
+                    card_number = card_data.get('card_number', '').strip()
+                    if not card_number:
+                        continue
+                    
+                    # Fetch live pricing data - keep in JPY
+                    price_data = get_yuyutei_prices_by_card_number(card_number)
+                    current_price_yen = 0
+                    current_price_sgd = 0
+                    
+                    if price_data and len(price_data) > 0:
+                        # Filter for reasonable prices (between ¥50 and ¥50000)
+                        valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
+                        if valid_prices:
+                            current_price_yen = valid_prices[0].get('price_yen', 0)
+                            current_price_sgd = current_price_yen * JPY_TO_SGD_RATE  # For display only
+                    
+                    # Convert purchase price - focus on JPY
+                    purchase_price_original = float(card_data.get('purchase_price_original', 0))
+                    original_currency = card_data.get('original_currency', 'JPY')
+                    
+                    if original_currency == 'JPY':
+                        purchase_price_yen = purchase_price_original
+                        purchase_price_sgd = purchase_price_original * JPY_TO_SGD_RATE  # For display only
+                    else:
+                        # If not JPY, assume it was already in JPY (since Yuyu-tei is JPY)
+                        purchase_price_yen = purchase_price_original
+                        purchase_price_sgd = purchase_price_original * JPY_TO_SGD_RATE
+                    
+                    # Create inventory card
+                    new_card = InventoryCard(
+                        name=card_data.get('name', 'Unknown Card'),
+                        set_name=card_data.get('set_name', ''),
+                        card_number=card_number,
+                        rarity=card_data.get('rarity', ''),
+                        color=card_data.get('color', ''),
+                        quantity=int(card_data.get('quantity', 1)),
+                        purchase_price_yen=purchase_price_yen,
+                        purchase_price_sgd=purchase_price_sgd,
+                        current_price_yen=current_price_yen,
+                        current_price_sgd=current_price_sgd,
+                        condition='Near Mint',  # Default for AI-added cards
+                        notes=f'Added via AI on {datetime.now().strftime("%Y-%m-%d")}',
+                        image_url=card_data.get('image_url', ''),
+                        last_price_update=datetime.utcnow()
+                    )
+                    
+                    db.session.add(new_card)
+                    db.session.flush()  # Get the ID
+                    
+                    # Create price history entry
+                    if current_price_yen > 0:
+                        price_entry = PriceHistory(
+                            inventory_card_id=new_card.id,
+                            price_yen=current_price_yen,
+                            price_sgd=current_price_sgd,
+                            jpy_to_sgd_rate=JPY_TO_SGD_RATE
+                        )
+                        db.session.add(price_entry)
+                    
+                    added_cards.append(new_card.name)
+                    
+                except Exception as e:
+                    print(f"Error processing card {card_data.get('name', 'Unknown')}: {e}")
+                    continue
+            
+            # Commit all changes
+            if added_cards:
+                db.session.commit()
+                flash(f"Successfully added {len(added_cards)} cards to inventory: {', '.join(added_cards)}", "success")
+            else:
+                flash("No cards could be processed successfully.", "error")
+            
+            return redirect(url_for('inventory.inventory_list'))
+            
+        except Exception as e:
+            db.session.rollback()
+            # Clean up files in case of error
+            for path in image_paths:
+                if os.path.exists(path):
+                    os.remove(path)
+            flash(f"Error processing request: {str(e)}", "error")
+            return redirect(url_for('inventory.add_inventory_card_with_ai'))
+    
+    return render_template('add_inventory_card_with_ai.html')
+
 @inventory_bp.route('/card/<int:card_id>')
 def view_card_details(card_id):
     """View detailed information about a specific inventory card including price history"""
@@ -103,20 +256,20 @@ def view_card_details(card_id):
     
     # Calculate statistics
     if len(price_history) > 1:
-        latest_price = price_history[0].price_sgd
-        oldest_price = price_history[-1].price_sgd
+        latest_price = price_history[0].price_yen
+        oldest_price = price_history[-1].price_yen
         price_change = latest_price - oldest_price
         price_change_percentage = (price_change / oldest_price * 100) if oldest_price > 0 else 0
         
         # Find highest and lowest prices in the period
-        all_prices = [p.price_sgd for p in price_history]
+        all_prices = [p.price_yen for p in price_history]
         highest_price = max(all_prices)
         lowest_price = min(all_prices)
     else:
         price_change = 0
         price_change_percentage = 0
-        highest_price = card.current_price_sgd
-        lowest_price = card.current_price_sgd
+        highest_price = card.current_price_yen
+        lowest_price = card.current_price_yen
     
     return render_template('inventory_card_details.html', 
                          card=card, 

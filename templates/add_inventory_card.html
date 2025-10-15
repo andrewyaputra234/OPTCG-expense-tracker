@@ -39,14 +39,7 @@
                                     <div class="form-text">Original purchase price in Japanese Yen</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="purchase_price_sgd" class="form-label">Purchase Price (SGD)</label>
-                                    <input type="number" class="form-control" id="purchase_price_sgd" name="purchase_price_sgd" 
-                                           step="0.01" min="0" value="0">
-                                    <div class="form-text">Equivalent price in Singapore Dollars</div>
-                                </div>
-                            </div>
+
                         </div>
 
                         <div class="row">
@@ -81,9 +74,14 @@
                             <a href="{{ url_for('inventory.inventory_list') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Back to Inventory
                             </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Add to Inventory
-                            </button>
+                            <div>
+                                <a href="{{ url_for('inventory.add_inventory_card_with_ai') }}" class="btn btn-outline-primary me-2">
+                                    <i class="fas fa-robot"></i> Use AI Instead
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Add to Inventory
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -109,21 +107,6 @@
 
 {% block scripts %}
 <script>
-    // Auto-calculate SGD from Yen when exchange rate is available
-    const yenInput = document.getElementById('purchase_price_yen');
-    const sgdInput = document.getElementById('purchase_price_sgd');
-    const exchangeRate = 0.009; // Approximate JPY to SGD rate
-
-    yenInput.addEventListener('input', function() {
-        if (this.value && !sgdInput.value) {
-            sgdInput.value = (parseFloat(this.value) * exchangeRate).toFixed(2);
-        }
-    });
-
-    sgdInput.addEventListener('input', function() {
-        if (this.value && !yenInput.value) {
-            yenInput.value = (parseFloat(this.value) / exchangeRate).toFixed(0);
-        }
-    });
+    // Focus on JPY pricing only - no currency conversion needed
 </script>
 {% endblock %}
