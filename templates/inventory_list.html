@@ -59,6 +59,17 @@
                     <div class="card">
                         <div class="card-body py-2">
                             <form method="GET" class="d-flex align-items-center flex-wrap">
+                                <!-- Search Bar -->
+                                <div class="me-3 mb-2">
+                                    <label for="search" class="form-label me-2 mb-0">
+                                        <i class="fas fa-search"></i> Search:
+                                    </label>
+                                    <input type="text" name="search" id="search" class="form-control d-inline-block" 
+                                           style="width: 200px;" placeholder="Search card names..." 
+                                           value="{{ search_query or '' }}"
+                                           onkeypress="if(event.key==='Enter') this.form.submit()">
+                                </div>
+                                
                                 <!-- Category Filter -->
                                 <div class="me-3 mb-2">
                                     <label for="category" class="form-label me-2 mb-0">
@@ -71,6 +82,9 @@
                                     <optgroup label="💎 Premium Categories (Highest Value)">
                                         <option value="Mangas" {% if 'Mangas' == selected_category %}selected{% endif %}>
                                             📚 Mangas{% if category_counts.get('Mangas') %} ({{ category_counts['Mangas'] }}){% endif %}
+                                        </option>
+                                        <option value="Event Mangas" {% if 'Event Mangas' == selected_category %}selected{% endif %}>
+                                            🎉 Event Mangas{% if category_counts.get('Event Mangas') %} ({{ category_counts['Event Mangas'] }}){% endif %}
                                         </option>
                                         <option value="SP" {% if 'SP' == selected_category %}selected{% endif %}>
                                             ⭐ SP{% if category_counts.get('SP') %} ({{ category_counts['SP'] }}){% endif %}
@@ -126,13 +140,27 @@
                                     </select>
                                 </div>
                                 
+                                <!-- Search Actions -->
+                                <div class="me-3 mb-2">
+                                    <button type="submit" class="btn btn-sm btn-primary me-1">
+                                        <i class="fas fa-search"></i> Search
+                                    </button>
+                                    {% if search_query %}
+                                        <a href="{{ url_for('inventory.inventory_list', category=selected_category, set=selected_set, sort_by=sort_by, sort_order=sort_order) }}" 
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="fas fa-times"></i> Clear
+                                        </a>
+                                    {% endif %}
+                                </div>
+                                
                                 <small class="text-muted">
                                     Showing {{ cards|length }} card(s)
+                                    {% if search_query %} matching "{{ search_query }}"{% endif %}
                                     {% if selected_category != 'All' %} in {{ selected_category }}{% endif %}
                                     {% if selected_set != 'All' %} from {{ get_set_display_name(selected_set) }}{% endif %}
                                 </small>
                                 
-                                <!-- Hidden field to preserve other filters -->
+                                <!-- Hidden fields to preserve other filters -->
                                 <input type="hidden" name="sort_by" value="{{ sort_by }}">
                                 <input type="hidden" name="sort_order" value="{{ sort_order }}">
                             </form>
@@ -326,10 +354,13 @@
                                 {% for card in cards %}
                                 {% set individual_gain_loss = (card.current_price_sgd - card.purchase_price_sgd) * card.quantity %}
                                 {% set individual_gain_loss_percentage = ((card.current_price_sgd - card.purchase_price_sgd) / card.purchase_price_sgd * 100) if card.purchase_price_sgd > 0 else 0 %}
-                                <tr>
+                                <tr class="{% if card.id in newly_added_cards %}newly-added-card{% endif %}">
                                     <td>
                                         <a href="{{ url_for('inventory.view_card_details', card_id=card.id) }}" class="text-decoration-none text-white">
                                             <strong>{{ card.name }}</strong>
+                                            {% if card.id in newly_added_cards %}
+                                                <span class="badge bg-success ms-2 newly-added-badge">✨ NEW</span>
+                                            {% endif %}
                                         </a>
                                         {% if card.set_name %}
                                             <br><small class="text-secondary">{{ card.set_name }}</small>
@@ -351,6 +382,7 @@
                                     <td>
                                         <span class="badge 
                                             {% if card.category == 'Mangas' %}bg-info
+                                            {% elif card.category == 'Event Mangas' %}bg-gradient bg-primary text-warning
                                             {% elif card.category == 'SP' %}bg-warning
                                             {% elif card.category == 'AA LDR' %}bg-danger
                                             {% elif card.category == 'SEC' %}bg-dark
@@ -527,4 +559,48 @@
         window.location.search = urlParams.toString();
     }
 </script>
+
+<style>
+    /* Highlight newly added cards */
+    .newly-added-card {
+        background: linear-gradient(90deg, rgba(40, 167, 69, 0.2), rgba(40, 167, 69, 0.1));
+        border-left: 4px solid #28a745;
+        animation: highlightFade 3s ease-in-out;
+    }
+    
+    @keyframes highlightFade {
+        0% {
+            background: rgba(40, 167, 69, 0.4);
+            box-shadow: 0 0 15px rgba(40, 167, 69, 0.6);
+        }
+        50% {
+            background: rgba(40, 167, 69, 0.3);
+            box-shadow: 0 0 10px rgba(40, 167, 69, 0.4);
+        }
+        100% {
+            background: rgba(40, 167, 69, 0.1);
+            box-shadow: none;
+        }
+    }
+    
+    .newly-added-card:hover {
+        background: rgba(40, 167, 69, 0.15) !important;
+    }
+    
+    .newly-added-badge {
+        animation: badgePulse 2s infinite;
+        font-size: 0.7em;
+    }
+    
+    @keyframes badgePulse {
+        0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+    }
+</style>
 {% endblock %}

@@ -1,8 +1,9 @@
 print("Importing inventory blueprint")
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from models import db, InventoryCard, PriceHistory
 from chatbot_service import get_yuyutei_prices_by_card_number
 from datetime import date, datetime, timedelta
+from sqlalchemy import or_
 import re
 
 inventory_bp = Blueprint('inventory', __name__, template_folder='../templates')
@@ -10,13 +11,42 @@ inventory_bp = Blueprint('inventory', __name__, template_folder='../templates')
 # Exchange rate (updated to more current rate)
 JPY_TO_SGD_RATE = 0.0086  # More accurate JPY to SGD rate as of 2024/2025
 
+def normalize_card_number_for_scraping(card_number):
+    """Normalize card number for price scraping (removes PRB prefix)
+    
+    Examples:
+    - PRB2-OP10-119 -> OP10-119
+    - PRB1-ST05-012 -> ST05-012  
+    - OP01-025 -> OP01-025 (unchanged)
+    """
+    if not card_number:
+        return card_number
+    
+    # Remove PRB prefix for scraping (e.g., PRB2-OP10-119 -> OP10-119)
+    if card_number.upper().startswith('PRB') and card_number.count('-') >= 2:
+        parts = card_number.split('-')
+        if len(parts) >= 3:
+            # Join the actual set and card number (skip PRB prefix)
+            return f"{parts[1]}-{parts[2]}"
+    
+    # Return original card number if no PRB prefix
+    return card_number
+
 def extract_set_from_card_number(card_number):
-    """Extract set name from card number (e.g., OP01-025 -> OP01)"""
+    """Extract set name from card number (e.g., OP01-025 -> OP01, PRB2-OP10-119 -> OP10)"""
     if not card_number:
         return 'Unknown'
     
-    # Handle different card number formats
-    if '-' in card_number:
+    # Handle PRB prefix cases (e.g., PRB2-OP10-119)
+    if card_number.upper().startswith('PRB') and card_number.count('-') >= 2:
+        # Split by dash and get the second part (skip PRB2, get OP10)
+        parts = card_number.split('-')
+        if len(parts) >= 2:
+            set_part = parts[1]  # Get OP10 from PRB2-OP10-119
+        else:
+            return 'Unknown'
+    # Handle normal card number formats
+    elif '-' in card_number:
         set_part = card_number.split('-')[0]
     elif len(card_number) >= 4:
         # Handle cases like OP01025 (no dash)
@@ -70,7 +100,11 @@ def detect_category_from_text(text):
     text_lower = text.lower()
     
     # Priority order - check for specific keywords
-    # Check for manga variants first (highest priority)
+    # Check for event manga variants first (highest priority)
+    if any(keyword in text_lower for keyword in ['event manga', 'event mangas']):
+        return 'Event Mangas'
+    
+    # Check for regular manga variants
     if any(keyword in text_lower for keyword in ['manga', 'mangas']):
         return 'Mangas'
     
@@ -103,14 +137,26 @@ def detect_category_from_text(text):
 @inventory_bp.route('/')
 def inventory_list():
     """Display all inventory cards with current values and trends"""
-    # Get category and set filters and sorting from query parameters
+    # Get category and set filters, search query, and sorting from query parameters
     selected_category = request.args.get('category', 'All')
     selected_set = request.args.get('set', 'All')
+    search_query = request.args.get('search', '').strip()
     sort_by = request.args.get('sort_by', 'current_price')  # Default to current price
     sort_order = request.args.get('sort_order', 'desc')  # Default to highest first
     
     # Build base query
     query = InventoryCard.query
+    
+    # Filter cards based on search query (search in card name and card number)
+    if search_query:
+        search_pattern = f'%{search_query}%'
+        query = query.filter(
+            or_(
+                InventoryCard.name.ilike(search_pattern),
+                InventoryCard.card_number.ilike(search_pattern),
+                InventoryCard.set_name.ilike(search_pattern)
+            )
+        )
     
     # Filter cards based on selected category
     if selected_category != 'All':
@@ -222,10 +268,18 @@ def inventory_list():
     
     available_sets = ['All'] + sorted(list(all_possible_sets), key=sort_set_key)
     
+    # Get recently added card IDs from session for highlighting
+    newly_added_cards = session.get('newly_added_cards', [])
+    
+    # Clear the newly added cards from session after showing them once
+    if newly_added_cards:
+        session.pop('newly_added_cards', None)
+    
     return render_template('inventory_list.html', 
                          cards=cards,
                          selected_category=selected_category,
                          selected_set=selected_set,
+                         search_query=search_query,
                          all_categories=all_categories,
                          available_sets=available_sets,
                          category_counts=category_counts,
@@ -241,6 +295,7 @@ def inventory_list():
                          total_current_value_sgd=total_current_value_sgd,
                          total_gain_loss_sgd=total_gain_loss_sgd,
                          total_gain_loss_percentage_sgd=total_gain_loss_percentage_sgd,
+                         newly_added_cards=newly_added_cards,
                          JPY_TO_SGD_RATE=JPY_TO_SGD_RATE)
 
 @inventory_bp.route('/add', methods=['GET', 'POST'])
@@ -309,7 +364,9 @@ def add_inventory_card():
                     return render_template('add_inventory_card.html')
                 
                 # Fetch current market price from Yuyu-tei (get all variants)
-                price_data = get_yuyutei_prices_by_card_number(card_number)
+                # Normalize card number for scraping (removes PRB prefix)
+                normalized_card_number = normalize_card_number_for_scraping(card_number)
+                price_data = get_yuyutei_prices_by_card_number(normalized_card_number)
                 
                 if price_data and len(price_data) > 0:
                     # Filter for reasonable prices - higher upper limit for Manga cards
@@ -378,6 +435,9 @@ def add_inventory_card():
                     
                     db.session.add(price_entry)
                     db.session.commit()
+                    
+                    # Store newly added card ID in session for highlighting
+                    session['newly_added_cards'] = [new_card.id]
                     
                     flash(f'Card {card_number} added to inventory successfully!', 'success')
                     return redirect(url_for('inventory.inventory_list'))
@@ -448,6 +508,7 @@ def add_inventory_card_with_ai():
             
             # Process each card identified by AI
             added_cards = []
+            added_card_ids = []
             for card_data in card_data_list:
                 try:
                     card_number = card_data.get('card_number', '').strip()
@@ -472,7 +533,9 @@ def add_inventory_card_with_ai():
                     print(f"Auto-detected category: {category} (from description: '{user_description}')")
                     
                     # Fetch live pricing data (get all variants) - keep in JPY
-                    price_data = get_yuyutei_prices_by_card_number(card_number)
+                    # Normalize card number for scraping (removes PRB prefix)
+                    normalized_card_number = normalize_card_number_for_scraping(card_number)
+                    price_data = get_yuyutei_prices_by_card_number(normalized_card_number)
                     current_price_yen = 0
                     current_price_sgd = 0
                     
@@ -544,6 +607,7 @@ def add_inventory_card_with_ai():
                         db.session.add(price_entry)
                     
                     added_cards.append(new_card.name)
+                    added_card_ids.append(new_card.id)
                     
                 except Exception as e:
                     print(f"Error processing card {card_data.get('name', 'Unknown')}: {e}")
@@ -552,6 +616,10 @@ def add_inventory_card_with_ai():
             # Commit all changes
             if added_cards:
                 db.session.commit()
+                
+                # Store newly added card IDs in session for highlighting
+                session['newly_added_cards'] = added_card_ids
+                
                 flash(f"Successfully added {len(added_cards)} cards to inventory: {', '.join(added_cards)}", "success")
             else:
                 flash("No cards could be processed successfully.", "error")
@@ -623,28 +691,30 @@ def update_all_prices():
                 print(f"Skipping {card.card_number}: {card.name} (Manual price override active)")
                 continue
             
-            price_data = get_yuyutei_prices_by_card_number(card.card_number)
+            # Normalize card number for scraping (removes PRB prefix)  
+            normalized_card_number = normalize_card_number_for_scraping(card.card_number)
+            price_data = get_yuyutei_prices_by_card_number(normalized_card_number)
             
             if price_data and len(price_data) > 0:
-                # Filter for reasonable prices - higher upper limit for Manga cards
-                if card.category == 'Mangas':
+                # Filter for reasonable prices - higher upper limit for Manga-type cards
+                if card.category in ['Mangas', 'Event Mangas']:
                     # Manga cards can be very expensive (up to ¥1,000,000)
                     valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 1000000]
-                    print(f"  Manga card: Using extended price range (¥50 - ¥1,000,000)")
+                    print(f"  Manga-type card: Using extended price range (¥50 - ¥1,000,000)")
                 else:
                     # Regular cards use standard price range
                     valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
                 
                 if valid_prices:
                     # Priority order for highest price selection:
-                    # 1. Mangas (ALWAYS highest price - top priority)
+                    # 1. Mangas & Event Mangas (ALWAYS highest price - top priority)
                     # 2. SP (second highest value) 
                     # 3. Others use first result
-                    if card.category == 'Mangas':
-                        # Manga cards ALWAYS get the absolute highest price
+                    if card.category in ['Mangas', 'Event Mangas']:
+                        # Manga-type cards ALWAYS get the absolute highest price
                         selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
                         current_price_yen = selected_card.get('price_yen', 0)
-                        print(f"Manga card detected - using HIGHEST price: ¥{current_price_yen:,}")
+                        print(f"Manga-type card detected - using HIGHEST price: ¥{current_price_yen:,}")
                     elif card.category == 'SP':
                         # SP cards get highest price
                         selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))

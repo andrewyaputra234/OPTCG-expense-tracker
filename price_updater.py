@@ -13,6 +13,27 @@ from chatbot_service import get_yuyutei_prices_by_card_number
 # Exchange rate (updated to more current rate)  
 JPY_TO_SGD_RATE = 0.0086  # More accurate JPY to SGD rate as of 2024/2025
 
+def normalize_card_number_for_scraping(card_number):
+    """Normalize card number for price scraping (removes PRB prefix)
+    
+    Examples:
+    - PRB2-OP10-119 -> OP10-119
+    - PRB1-ST05-012 -> ST05-012  
+    - OP01-025 -> OP01-025 (unchanged)
+    """
+    if not card_number:
+        return card_number
+    
+    # Remove PRB prefix for scraping (e.g., PRB2-OP10-119 -> OP10-119)
+    if card_number.upper().startswith('PRB') and card_number.count('-') >= 2:
+        parts = card_number.split('-')
+        if len(parts) >= 3:
+            # Join the actual set and card number (skip PRB prefix)
+            return f"{parts[1]}-{parts[2]}"
+    
+    # Return original card number if no PRB prefix
+    return card_number
+
 def update_all_card_prices():
     """Update prices for all inventory cards and add to price history"""
     app = create_app()
@@ -39,26 +60,29 @@ def update_all_card_prices():
                 print(f"Updating {card.card_number}: {card.name}...")
                 
                 # Fetch current price from Yuyu-tei (get all variants)
-                price_data = get_yuyutei_prices_by_card_number(card.card_number)
+                # Normalize card number for scraping (removes PRB prefix)
+                normalized_card_number = normalize_card_number_for_scraping(card.card_number)
+                print(f"  Searching with normalized card number: {normalized_card_number}")
+                price_data = get_yuyutei_prices_by_card_number(normalized_card_number)
                 
                 if price_data and len(price_data) > 0:
-                    # Filter for reasonable prices - higher upper limit for Manga cards
-                    if card.category == 'Mangas':
-                        # Manga cards can be very expensive (up to ¥500,000+)
+                    # Filter for reasonable prices - higher upper limit for Manga-type cards
+                    if card.category in ['Mangas', 'Event Mangas']:
+                        # Manga-type cards can be very expensive (up to ¥1,000,000)
                         valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 1000000]
-                        print(f"  Manga card: Using extended price range (¥50 - ¥1,000,000)")
+                        print(f"  Manga-type card: Using extended price range (¥50 - ¥1,000,000)")
                     else:
                         # Regular cards: more conservative range
                         valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 100000]
                     
                     if valid_prices:
                         # Priority order for highest price selection:
-                        # 1. Mangas (ALWAYS highest price - top priority)
+                        # 1. Mangas & Event Mangas (ALWAYS highest price - top priority)
                         # 2. SP (second highest value)
                         # 3. Others use first result
-                        if card.category == 'Mangas':
-                            # Manga cards ALWAYS get the absolute highest price
-                            print(f"  📚 MANGA CARD PROCESSING:")
+                        if card.category in ['Mangas', 'Event Mangas']:
+                            # Manga-type cards ALWAYS get the absolute highest price
+                            print(f"  📚 MANGA-TYPE CARD PROCESSING ({card.category}):")
                             print(f"     Found {len(valid_prices)} valid price options:")
                             for i, price_option in enumerate(sorted(valid_prices, key=lambda x: x.get('price_yen', 0), reverse=True)):
                                 print(f"     #{i+1}: ¥{price_option.get('price_yen', 0):,} - {price_option.get('name', 'Unknown')}")
@@ -79,7 +103,7 @@ def update_all_card_prices():
                         for i, raw_price in enumerate(price_data[:3]):  # Show first 3 results
                             price_val = raw_price.get('price_yen', 0)
                             price_name = raw_price.get('name', 'Unknown')
-                            if card.category == 'Mangas':
+                            if card.category in ['Mangas', 'Event Mangas']:
                                 in_range = 50 <= price_val <= 1000000
                             else:
                                 in_range = 50 <= price_val <= 100000

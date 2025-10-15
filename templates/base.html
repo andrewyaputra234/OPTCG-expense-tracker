@@ -33,6 +33,16 @@
                 <a href="{{ url_for('add_card') }}" class="{% if request.endpoint == 'add_card' %}active{% endif %}">Add Card</a>
                 <a href="{{ url_for('add_card_with_ai') }}" class="{% if request.endpoint == 'add_card_with_ai' %}active{% endif %}">Add Card (AI)</a>
                 <a href="{{ url_for('wishlist') }}" class="{% if request.endpoint in ['wishlist','add_wishlist_item','edit_wishlist_item'] %}active{% endif %}">Wishlist</a>
+                
+                <!-- Quick Search -->
+                <form action="{{ url_for('inventory.inventory_list') }}" method="GET" class="d-inline-block ms-3">
+                    <div class="input-group input-group-sm" style="width: 200px;">
+                        <input type="text" name="search" class="form-control" placeholder="🔍 Quick search...">
+                        <button type="submit" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
             </nav>
         </div>
     </header>
