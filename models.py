@@ -49,6 +49,12 @@ class InventoryCard(db.Model):
     current_price_sgd = db.Column(db.Float, default=0.0)
     last_price_update = db.Column(db.DateTime, default=datetime.utcnow)
     
+    # Manual price override (takes priority over Yuyu-tei)
+    manual_price_yen = db.Column(db.Float, default=None, nullable=True)
+    manual_price_sgd = db.Column(db.Float, default=None, nullable=True)
+    is_manual_override = db.Column(db.Boolean, default=False)
+    manual_price_date = db.Column(db.DateTime, default=None, nullable=True)
+    
     # Additional info
     condition = db.Column(db.String(50), default='Near Mint')  # NM, LP, MP, HP, etc.
     category = db.Column(db.String(50), default='Regular')  # Mangas, SP, AA LDR, SEC, AA, SR

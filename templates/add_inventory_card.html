@@ -13,15 +13,7 @@
                 <div class="card-body">
                     <form method="POST">
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="card_number" class="form-label">Card Number <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="card_number" name="card_number" 
-                                           placeholder="e.g., OP01-025" required>
-                                    <div class="form-text">Enter the card number to fetch live pricing data</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="mb-3">
                                     <label for="quantity" class="form-label">Quantity</label>
                                     <input type="number" class="form-control" id="quantity" name="quantity" 
@@ -30,16 +22,84 @@
                             </div>
                         </div>
 
-                        <div class="row">
+                        <!-- Currency Selection -->
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="card bg-light">
+                                    <div class="card-body py-2">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-4">
+                                                <label class="form-label mb-0">
+                                                    <i class="fas fa-money-bill-wave"></i> <strong>Pricing Mode:</strong>
+                                                </label>
+                                            </div>
+                                            <div class="col-md-8">
+                                                <div class="btn-group w-100" role="group" id="pricing-mode-group">
+                                                    <input type="radio" class="btn-check" name="pricing_mode" id="pricing-jpy" value="jpy" checked onchange="switchPricingMode()">
+                                                    <label class="btn btn-outline-primary" for="pricing-jpy">
+                                                        <i class="fas fa-yen-sign"></i> JPY + Yuyu-tei Auto-pricing
+                                                    </label>
+                                                    
+                                                    <input type="radio" class="btn-check" name="pricing_mode" id="pricing-sgd" value="sgd" onchange="switchPricingMode()">
+                                                    <label class="btn btn-outline-success" for="pricing-sgd">
+                                                        <i class="fas fa-dollar-sign"></i> SGD Manual Entry
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- JPY Pricing (default, for Yuyu-tei cards) -->
+                        <div class="row" id="jpy-pricing-section">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="purchase_price_yen" class="form-label">Purchase Price (¥)</label>
                                     <input type="number" class="form-control" id="purchase_price_yen" name="purchase_price_yen" 
                                            step="0.01" min="0" value="0">
-                                    <div class="form-text">Original purchase price in Japanese Yen</div>
+                                    <div class="form-text">
+                                        <i class="fas fa-info-circle"></i> Current market price will be fetched automatically from Yuyu-tei
+                                    </div>
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="card_number" class="form-label">Card Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="card_number_jpy" name="card_number" 
+                                           placeholder="e.g., OP01-025" required>
+                                    <div class="form-text">Required for Yuyu-tei price fetching</div>
+                                </div>
+                            </div>
+                        </div>
 
+                        <!-- SGD Pricing (hidden by default, for miscellaneous cards) -->
+                        <div class="row" id="sgd-pricing-section" style="display: none;">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="purchase_price_sgd" class="form-label">Purchase Price (S$)</label>
+                                    <input type="number" class="form-control" id="purchase_price_sgd" name="purchase_price_sgd" 
+                                           step="0.01" min="0" value="0">
+                                    <div class="form-text">Your purchase price in Singapore Dollars</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="current_price_sgd" class="form-label">Current Market Value (S$)</label>
+                                    <input type="number" class="form-control" id="current_price_sgd" name="current_price_sgd" 
+                                           step="0.01" min="0" value="0">
+                                    <div class="form-text">Current estimated market value (you can update this later)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label for="card_name_sgd" class="form-label">Card Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="card_name_sgd" name="card_name" 
+                                           placeholder="e.g., Custom Card Name, Local Tournament Promo">
+                                    <div class="form-text">Full name of your miscellaneous card</div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="row">
@@ -58,15 +118,24 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="category" class="form-label">Category</label>
-                                    <select class="form-select" id="category" name="category">
-                                        <option value="Regular" selected>Regular</option>
-                                        <option value="Mangas">Mangas</option>
-                                        <option value="SP">SP (Special Parallel)</option>
-                                        <option value="AA LDR">AA LDR (Alternate Art Leaders)</option>
-                                        <option value="SEC">SEC (Secret Rares)</option>
-                                        <option value="AA">AA (Regular Alternate Arts)</option>
-                                        <option value="SR">SR (Super Rares)</option>
+                                    <select class="form-select" id="category" name="category" onchange="toggleCurrencyMode()">
+                                        <optgroup label="📦 Yuyu-tei Market Cards (JPY + Auto-pricing)">
+                                            <option value="Regular" selected>Regular</option>
+                                            <option value="Mangas">📚 Mangas (Highest Priority)</option>
+                                            <option value="SP">⭐ SP (Special Parallel)</option>
+                                            <option value="AA LDR">👑 AA LDR (Alternate Art Leaders)</option>
+                                            <option value="SEC">🔐 SEC (Secret Rares)</option>
+                                            <option value="AA">🎨 AA (Regular Alternate Arts)</option>
+                                            <option value="SR">💫 SR (Super Rares)</option>
+                                        </optgroup>
+                                        <optgroup label="💰 Manual Entry Cards (SGD)">
+                                            <option value="Miscellaneous">🏷️ Miscellaneous (SGD Manual Entry)</option>
+                                        </optgroup>
                                     </select>
+                                    <div class="form-text">
+                                        <strong>Yuyu-tei categories:</strong> Auto-fetch prices from Yuyu-tei market<br>
+                                        <strong>Miscellaneous:</strong> Manual SGD entry for cards not on Yuyu-tei
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -124,6 +193,76 @@
 
 {% block scripts %}
 <script>
-    // Focus on JPY pricing only - no currency conversion needed
+    function switchPricingMode() {
+        const jpyMode = document.getElementById('pricing-jpy').checked;
+        const sgdMode = document.getElementById('pricing-sgd').checked;
+        
+        const jpySection = document.getElementById('jpy-pricing-section');
+        const sgdSection = document.getElementById('sgd-pricing-section');
+        const categorySelect = document.getElementById('category');
+        
+        if (jpyMode) {
+            // Show JPY section, hide SGD section
+            jpySection.style.display = '';
+            sgdSection.style.display = 'none';
+            
+            // Enable Yuyu-tei categories, disable Miscellaneous
+            Array.from(categorySelect.options).forEach(option => {
+                if (option.value === 'Miscellaneous') {
+                    option.disabled = true;
+                } else {
+                    option.disabled = false;
+                }
+            });
+            
+            // Select Regular if Miscellaneous was selected
+            if (categorySelect.value === 'Miscellaneous') {
+                categorySelect.value = 'Regular';
+            }
+            
+            // Update required fields
+            document.getElementById('card_number_jpy').required = true;
+            document.getElementById('card_name_sgd').required = false;
+        } else if (sgdMode) {
+            // Show SGD section, hide JPY section
+            jpySection.style.display = 'none';
+            sgdSection.style.display = '';
+            
+            // Disable Yuyu-tei categories, enable Miscellaneous
+            Array.from(categorySelect.options).forEach(option => {
+                if (option.value === 'Miscellaneous') {
+                    option.disabled = false;
+                } else {
+                    option.disabled = true;
+                }
+            });
+            
+            // Auto-select Miscellaneous for SGD mode
+            categorySelect.value = 'Miscellaneous';
+            
+            // Update required fields
+            document.getElementById('card_number_jpy').required = false;
+            document.getElementById('card_name_sgd').required = true;
+        }
+    }
+    
+    function toggleCurrencyMode() {
+        const categorySelect = document.getElementById('category');
+        
+        if (categorySelect.value === 'Miscellaneous') {
+            // Auto-switch to SGD mode for miscellaneous cards
+            document.getElementById('pricing-sgd').checked = true;
+            switchPricingMode();
+        } else {
+            // Auto-switch to JPY mode for Yuyu-tei categories
+            document.getElementById('pricing-jpy').checked = true;
+            switchPricingMode();
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        switchPricingMode();
+    });
 </script>
 {% endblock %}

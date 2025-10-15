@@ -10,6 +10,58 @@ inventory_bp = Blueprint('inventory', __name__, template_folder='../templates')
 # Exchange rate (updated to more current rate)
 JPY_TO_SGD_RATE = 0.0086  # More accurate JPY to SGD rate as of 2024/2025
 
+def extract_set_from_card_number(card_number):
+    """Extract set name from card number (e.g., OP01-025 -> OP01)"""
+    if not card_number:
+        return 'Unknown'
+    
+    # Handle different card number formats
+    if '-' in card_number:
+        set_part = card_number.split('-')[0]
+    elif len(card_number) >= 4:
+        # Handle cases like OP01025 (no dash)
+        set_part = card_number[:4]
+    else:
+        return 'Unknown'
+    
+    return set_part.upper()
+
+def get_set_display_name(set_code):
+    """Get friendly display name for set codes"""
+    set_names = {
+        'OP01': 'OP01 - ROMANCE DAWN',
+        'OP02': 'OP02 - Final Battle',
+        'OP03': 'OP03 - A powerful enemy',
+        'OP04': 'OP04 - Kingdom of Intrigue',
+        'OP05': 'OP05 - The protagonist of a new era',
+        'OP06': 'OP06 - The Conqueror of the Two Perfections',
+        'OP07': 'OP07 - 500 years into the future',
+        'OP08': 'OP08 - Two Legends',
+        'OP09': 'OP09 - The New Emperor',
+        'OP10': 'OP10 - Royal Bloodline',
+        'OP11': 'OP11 - Godspeed Fist',
+        'OP12': 'OP12 - The Bond Between Master and Disciple',
+        'OP13': 'OP13 - Inherited Will',
+        'PRB01': 'PRB01 - ONE PIECE CARD THE BEST',
+        'PRB02': 'PRB02 - ONE PIECE CARD THE BEST vol.2',
+        'ST01': 'ST01 - Straw Hat Crew',
+        'ST02': 'ST02 - Worst Generation',
+        'ST03': 'ST03 - The Seven Warlords of the Sea',
+        'ST04': 'ST04 - Animal Kingdom Pirates',
+        'ST05': 'ST05 - One Piece Film Red',
+        'ST06': 'ST06 - Absolute Justice',
+        'ST07': 'ST07 - Big Mom Pirates',
+        'ST08': 'ST08 - Monkey.D.Luffy',
+        'ST09': 'ST09 - Yamato',
+        'ST10': 'ST10 - Uta',
+        'ST11': 'ST11 - Uta',
+        'ST12': 'ST12 - Zoro and Sanji',
+        'ST13': 'ST13 - Charlotte Linlin',
+        'P': 'P - Promotional Cards'
+    }
+    
+    return set_names.get(set_code, f'{set_code} - Unknown Set')
+
 def detect_category_from_text(text):
     """Auto-detect category from user input text (case-insensitive)"""
     if not text:
@@ -42,13 +94,18 @@ def detect_category_from_text(text):
     if any(keyword in text_lower for keyword in ['sr', 'super rare']):
         return 'SR'
     
+    # Check for miscellaneous/manual variants
+    if any(keyword in text_lower for keyword in ['misc', 'miscellaneous', 'manual', 'custom']):
+        return 'Miscellaneous'
+    
     return None
 
 @inventory_bp.route('/')
 def inventory_list():
     """Display all inventory cards with current values and trends"""
-    # Get category filter and sorting from query parameters
+    # Get category and set filters and sorting from query parameters
     selected_category = request.args.get('category', 'All')
+    selected_set = request.args.get('set', 'All')
     sort_by = request.args.get('sort_by', 'current_price')  # Default to current price
     sort_order = request.args.get('sort_order', 'desc')  # Default to highest first
     
@@ -58,6 +115,10 @@ def inventory_list():
     # Filter cards based on selected category
     if selected_category != 'All':
         query = query.filter_by(category=selected_category)
+    
+    # Filter cards based on selected set
+    if selected_set != 'All':
+        query = query.filter(InventoryCard.card_number.like(f'{selected_set}%'))
     
     # Apply sorting
     if sort_by == 'name':
@@ -108,80 +169,111 @@ def inventory_list():
     total_current_value_yen = sum(card.current_price_yen * card.quantity for card in cards)
     total_gain_loss_yen = total_current_value_yen - total_purchase_value_yen
     total_gain_loss_percentage = (total_gain_loss_yen / total_purchase_value_yen * 100) if total_purchase_value_yen > 0 else 0
+
+    # Calculate totals in SGD (for filtered cards)
+    total_purchase_value_sgd = sum(card.purchase_price_sgd * card.quantity for card in cards)
+    total_current_value_sgd = sum(card.current_price_sgd * card.quantity for card in cards)
+    total_gain_loss_sgd = total_current_value_sgd - total_purchase_value_sgd
+    total_gain_loss_percentage_sgd = (total_gain_loss_sgd / total_purchase_value_sgd * 100) if total_purchase_value_sgd > 0 else 0
     
     # Get category counts for better overview
     all_cards = InventoryCard.query.all()
     category_counts = {}
-    for category in ['Mangas', 'SP', 'AA LDR', 'AA', 'SEC', 'SR', 'Regular']:
+    for category in ['Mangas', 'SP', 'AA LDR', 'AA', 'SEC', 'SR', 'Regular', 'Miscellaneous']:
         count = len([card for card in all_cards if card.category == category])
         if count > 0:
             category_counts[category] = count
     
+    # Get set counts for dropdown
+    set_counts = {}
+    for card in all_cards:
+        set_code = extract_set_from_card_number(card.card_number)
+        if set_code != 'Unknown':
+            if set_code in set_counts:
+                set_counts[set_code] += 1
+            else:
+                set_counts[set_code] = 1
+    
+    # Get all possible sets from the set names dictionary, plus any from inventory
+    all_possible_sets = set()
+    
+    # Add all sets from the display name function
+    for set_code in ['OP01', 'OP02', 'OP03', 'OP04', 'OP05', 'OP06', 'OP07', 'OP08', 'OP09', 'OP10', 'OP11', 'OP12', 'OP13',
+                     'PRB01', 'PRB02', 'ST01', 'ST02', 'ST03', 'ST04', 'ST05', 'ST06', 'ST07', 'ST08', 'ST09', 'ST10', 'ST11', 'ST12', 'ST13', 'P']:
+        all_possible_sets.add(set_code)
+    
+    # Add any sets found in inventory that might not be in our predefined list
+    for set_code in set_counts.keys():
+        if set_code != 'Unknown':
+            all_possible_sets.add(set_code)
+    
+    # Sort sets by code (OP01, OP02, etc.) - sort by extracting numbers for proper ordering
+    def sort_set_key(s):
+        if s.startswith('OP'):
+            return (1, int(s[2:]))
+        elif s.startswith('PRB'):
+            return (2, int(s[3:]))
+        elif s.startswith('ST'):
+            return (3, int(s[2:]))
+        elif s == 'P':
+            return (4, 0)
+        else:
+            return (5, s)
+    
+    available_sets = ['All'] + sorted(list(all_possible_sets), key=sort_set_key)
+    
     return render_template('inventory_list.html', 
                          cards=cards,
                          selected_category=selected_category,
+                         selected_set=selected_set,
                          all_categories=all_categories,
+                         available_sets=available_sets,
                          category_counts=category_counts,
+                         set_counts=set_counts,
+                         get_set_display_name=get_set_display_name,
                          sort_by=sort_by,
                          sort_order=sort_order,
                          total_purchase_value_yen=total_purchase_value_yen,
                          total_current_value_yen=total_current_value_yen,
                          total_gain_loss_yen=total_gain_loss_yen,
-                         total_gain_loss_percentage=total_gain_loss_percentage)
+                         total_gain_loss_percentage=total_gain_loss_percentage,
+                         total_purchase_value_sgd=total_purchase_value_sgd,
+                         total_current_value_sgd=total_current_value_sgd,
+                         total_gain_loss_sgd=total_gain_loss_sgd,
+                         total_gain_loss_percentage_sgd=total_gain_loss_percentage_sgd,
+                         JPY_TO_SGD_RATE=JPY_TO_SGD_RATE)
 
 @inventory_bp.route('/add', methods=['GET', 'POST'])
 def add_inventory_card():
     """Add a new card to inventory"""
     if request.method == 'POST':
-        card_number = request.form['card_number'].strip()
+        # Get common fields
         quantity = int(request.form.get('quantity', 1))
-        purchase_price_yen = float(request.form.get('purchase_price_yen', 0))
-        purchase_price_sgd = float(request.form.get('purchase_price_sgd', 0))
         condition = request.form.get('condition', 'Near Mint')
         category = request.form.get('category', 'Regular')
         notes = request.form.get('notes', '')
+        pricing_mode = request.form.get('pricing_mode', 'jpy')
         
         try:
-            # Fetch current market price from Yuyu-tei (get all variants)
-            price_data = get_yuyutei_prices_by_card_number(card_number)
-            
-            if price_data and len(price_data) > 0:
-                # Filter for reasonable prices (between ¥50 and ¥50000)
-                valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
+            if category == 'Miscellaneous' or pricing_mode == 'sgd':
+                # SGD Manual Entry Mode (for miscellaneous cards)
+                card_name = request.form.get('card_name', '').strip()
+                purchase_price_sgd = float(request.form.get('purchase_price_sgd', 0))
+                current_price_sgd = float(request.form.get('current_price_sgd', 0))
                 
-                if valid_prices:
-                    # Priority order for highest price selection:
-                    # 1. Mangas (ALWAYS highest price - top priority)
-                    # 2. SP (second highest value)
-                    # 3. Others use first result
-                    if category == 'Mangas':
-                        # Manga cards ALWAYS get the absolute highest price
-                        card_info = max(valid_prices, key=lambda x: x.get('price_yen', 0))
-                        print(f"Manga card detected - using HIGHEST price: ¥{card_info.get('price_yen', 0):,}")
-                    elif category == 'SP':
-                        # SP cards get highest price
-                        card_info = max(valid_prices, key=lambda x: x.get('price_yen', 0))
-                    else:
-                        # For other categories, use the first valid result
-                        card_info = valid_prices[0]
-                    
-                    current_price_yen = card_info.get('price_yen', 0)
-                    current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
-                else:
-                    # No valid prices found, use original data but set price to 0
-                    card_info = price_data[0]
-                    current_price_yen = 0
-                    current_price_sgd = 0
+                if not card_name:
+                    flash('Card name is required for miscellaneous cards.', 'error')
+                    return render_template('add_inventory_card.html')
                 
-                # Create inventory card
+                # Create card without Yuyu-tei lookup
                 new_card = InventoryCard(
-                    name=card_info.get('name', 'Unknown'),
-                    card_number=card_number,
-                    rarity=card_info.get('rarity', 'Unknown'),
+                    name=card_name,
+                    card_number=f"MISC-{datetime.now().strftime('%Y%m%d-%H%M%S')}",  # Generate unique number
+                    rarity='N/A',
                     quantity=quantity,
-                    purchase_price_yen=purchase_price_yen,
+                    purchase_price_yen=purchase_price_sgd / JPY_TO_SGD_RATE,  # Convert for storage
                     purchase_price_sgd=purchase_price_sgd,
-                    current_price_yen=current_price_yen,
+                    current_price_yen=current_price_sgd / JPY_TO_SGD_RATE if current_price_sgd > 0 else 0,
                     current_price_sgd=current_price_sgd,
                     condition=condition,
                     category=category,
@@ -190,23 +282,108 @@ def add_inventory_card():
                 )
                 
                 db.session.add(new_card)
-                db.session.flush()  # Get the ID
+                db.session.flush()
                 
-                # Create initial price history entry
-                price_entry = PriceHistory(
-                    inventory_card_id=new_card.id,
-                    price_yen=current_price_yen,
-                    price_sgd=current_price_sgd,
-                    jpy_to_sgd_rate=JPY_TO_SGD_RATE
-                )
+                # Create price history entry
+                if current_price_sgd > 0:
+                    price_entry = PriceHistory(
+                        inventory_card_id=new_card.id,
+                        price_yen=current_price_sgd / JPY_TO_SGD_RATE,
+                        price_sgd=current_price_sgd,
+                        jpy_to_sgd_rate=JPY_TO_SGD_RATE,
+                        source='manual'
+                    )
+                    db.session.add(price_entry)
                 
-                db.session.add(price_entry)
                 db.session.commit()
-                
-                flash(f'Card {card_number} added to inventory successfully!', 'success')
+                flash(f'Miscellaneous card "{card_name}" added successfully!', 'success')
                 return redirect(url_for('inventory.inventory_list'))
+                
             else:
-                flash(f'Could not fetch price data for card {card_number}. Please try again.', 'error')
+                # JPY + Yuyu-tei Mode (existing functionality)
+                card_number = request.form.get('card_number', '').strip()
+                purchase_price_yen = float(request.form.get('purchase_price_yen', 0))
+                
+                if not card_number:
+                    flash('Card number is required for Yuyu-tei cards.', 'error')
+                    return render_template('add_inventory_card.html')
+                
+                # Fetch current market price from Yuyu-tei (get all variants)
+                price_data = get_yuyutei_prices_by_card_number(card_number)
+                
+                if price_data and len(price_data) > 0:
+                    # Filter for reasonable prices - higher upper limit for Manga cards
+                    if category == 'Mangas':
+                        # Manga cards can be very expensive (up to ¥500,000+)
+                        valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 1000000]
+                        print(f"Manga card: Using extended price range (¥50 - ¥1,000,000)")
+                    else:
+                        # Regular cards: more conservative range
+                        valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 100000]
+                    
+                    if valid_prices:
+                        # Priority order for highest price selection:
+                        # 1. Mangas (ALWAYS highest price - top priority)
+                        # 2. SP (second highest value)
+                        # 3. Others use first result
+                        if category == 'Mangas':
+                            # Manga cards ALWAYS get the absolute highest price
+                            print(f"📚 MANGA CARD - Found {len(valid_prices)} valid price options:")
+                            for i, price_option in enumerate(sorted(valid_prices, key=lambda x: x.get('price_yen', 0), reverse=True)):
+                                print(f"   #{i+1}: ¥{price_option.get('price_yen', 0):,} - {price_option.get('name', 'Unknown')}")
+                            
+                            card_info = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                            print(f"✅ SELECTED HIGHEST: ¥{card_info.get('price_yen', 0):,}")
+                        elif category == 'SP':
+                            # SP cards get highest price
+                            card_info = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                        else:
+                            # For other categories, use the first valid result
+                            card_info = valid_prices[0]
+                        
+                        current_price_yen = card_info.get('price_yen', 0)
+                        current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
+                    else:
+                        # No valid prices found, use original data but set price to 0
+                        card_info = price_data[0]
+                        current_price_yen = 0
+                        current_price_sgd = 0
+                    
+                    # Create inventory card with Yuyu-tei data
+                    new_card = InventoryCard(
+                        name=card_info.get('name', 'Unknown'),
+                        card_number=card_number,
+                        rarity=card_info.get('rarity', 'Unknown'),
+                        quantity=quantity,
+                        purchase_price_yen=purchase_price_yen,
+                        purchase_price_sgd=purchase_price_yen * JPY_TO_SGD_RATE,  # Convert from JPY input
+                        current_price_yen=current_price_yen,
+                        current_price_sgd=current_price_sgd,
+                        condition=condition,
+                        category=category,
+                        notes=notes,
+                        last_price_update=datetime.utcnow()
+                    )
+                    
+                    db.session.add(new_card)
+                    db.session.flush()  # Get the ID
+                    
+                    # Create initial price history entry
+                    price_entry = PriceHistory(
+                        inventory_card_id=new_card.id,
+                        price_yen=current_price_yen,
+                        price_sgd=current_price_sgd,
+                        jpy_to_sgd_rate=JPY_TO_SGD_RATE
+                    )
+                    
+                    db.session.add(price_entry)
+                    db.session.commit()
+                    
+                    flash(f'Card {card_number} added to inventory successfully!', 'success')
+                    return redirect(url_for('inventory.inventory_list'))
+                    
+                else:
+                    flash(f'Could not fetch price data for card {card_number}. Please try again.', 'error')
                 
         except Exception as e:
             db.session.rollback()
@@ -437,11 +614,26 @@ def update_all_prices():
     
     for card in cards:
         try:
+            # Skip miscellaneous cards (manual pricing only)
+            if card.category == 'Miscellaneous':
+                continue
+                
+            # Skip cards with manual price override
+            if card.is_manual_override:
+                print(f"Skipping {card.card_number}: {card.name} (Manual price override active)")
+                continue
+            
             price_data = get_yuyutei_prices_by_card_number(card.card_number)
             
             if price_data and len(price_data) > 0:
-                # Filter for reasonable prices (between ¥50 and ¥50000)
-                valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
+                # Filter for reasonable prices - higher upper limit for Manga cards
+                if card.category == 'Mangas':
+                    # Manga cards can be very expensive (up to ¥1,000,000)
+                    valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 1000000]
+                    print(f"  Manga card: Using extended price range (¥50 - ¥1,000,000)")
+                else:
+                    # Regular cards use standard price range
+                    valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
                 
                 if valid_prices:
                     # Priority order for highest price selection:
@@ -535,12 +727,64 @@ def edit_inventory_card(card_id):
     card = InventoryCard.query.get_or_404(card_id)
     
     if request.method == 'POST':
+        # Update basic fields
         card.quantity = int(request.form.get('quantity', card.quantity))
-        card.purchase_price_yen = float(request.form.get('purchase_price_yen', card.purchase_price_yen))
-        card.purchase_price_sgd = float(request.form.get('purchase_price_sgd', card.purchase_price_sgd))
+        
+        # Handle purchase prices with proper conversion
+        purchase_price_yen = request.form.get('purchase_price_yen')
+        purchase_price_sgd = request.form.get('purchase_price_sgd')
+        
+        if purchase_price_yen:
+            card.purchase_price_yen = float(purchase_price_yen)
+            # Auto-calculate SGD if not provided or if JPY changed
+            if not purchase_price_sgd or float(purchase_price_sgd) == 0:
+                card.purchase_price_sgd = card.purchase_price_yen * JPY_TO_SGD_RATE
+            else:
+                card.purchase_price_sgd = float(purchase_price_sgd)
+        elif purchase_price_sgd:
+            card.purchase_price_sgd = float(purchase_price_sgd)
+            card.purchase_price_yen = card.purchase_price_sgd / JPY_TO_SGD_RATE
+        
         card.condition = request.form.get('condition', card.condition)
         card.category = request.form.get('category', card.category)
         card.notes = request.form.get('notes', card.notes)
+        
+        # Handle purchase date
+        purchase_date_str = request.form.get('purchase_date')
+        if purchase_date_str:
+            card.purchase_date = datetime.strptime(purchase_date_str, '%Y-%m-%d').date()
+        
+        # Handle manual price override
+        enable_override = request.form.get('enable_manual_override') == 'on'
+        
+        if enable_override and card.category != 'Miscellaneous':
+            # Enable manual override
+            manual_price_yen = request.form.get('manual_price_yen')
+            manual_price_sgd = request.form.get('manual_price_sgd')
+            
+            if manual_price_yen:
+                card.manual_price_yen = float(manual_price_yen)
+                card.manual_price_sgd = float(manual_price_sgd) if manual_price_sgd else card.manual_price_yen * JPY_TO_SGD_RATE
+                card.is_manual_override = True
+                card.manual_price_date = datetime.utcnow()
+                
+                # Update current prices to manual values
+                card.current_price_yen = card.manual_price_yen
+                card.current_price_sgd = card.manual_price_sgd
+                card.last_price_update = datetime.utcnow()
+                
+                flash('Manual price override enabled! Yuyu-tei updates will be skipped for this card.', 'warning')
+            else:
+                flash('Please enter a manual price in JPY to enable override.', 'error')
+                return render_template('edit_inventory_card.html', card=card, JPY_TO_SGD_RATE=JPY_TO_SGD_RATE)
+        else:
+            # Disable manual override
+            if card.is_manual_override:
+                card.manual_price_yen = None
+                card.manual_price_sgd = None
+                card.is_manual_override = False
+                card.manual_price_date = None
+                flash('Manual price override disabled. Yuyu-tei updates will resume for this card.', 'info')
         
         try:
             db.session.commit()
@@ -550,7 +794,7 @@ def edit_inventory_card(card_id):
             db.session.rollback()
             flash(f'Error updating card: {str(e)}', 'error')
     
-    return render_template('edit_inventory_card.html', card=card)
+    return render_template('edit_inventory_card.html', card=card, JPY_TO_SGD_RATE=JPY_TO_SGD_RATE)
 
 @inventory_bp.route('/card/<int:card_id>/delete', methods=['POST'])
 def delete_inventory_card(card_id):

@@ -38,7 +38,14 @@
                                            step="0.01" min="0" value="{{ card.purchase_price_yen }}">
                                 </div>
                             </div>
-
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="purchase_price_sgd" class="form-label">Purchase Price (S$)</label>
+                                    <input type="number" class="form-control" id="purchase_price_sgd" name="purchase_price_sgd" 
+                                           step="0.01" min="0" value="{{ card.purchase_price_sgd }}">
+                                    <div class="form-text">Auto-converts from JPY price above</div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="row">
@@ -85,9 +92,65 @@
                             <textarea class="form-control" id="notes" name="notes" rows="3">{{ card.notes or '' }}</textarea>
                         </div>
 
+                        <!-- Manual Price Override Section -->
+                        {% if card.category != 'Miscellaneous' %}
+                        <div class="card mb-3 border-warning">
+                            <div class="card-header bg-warning bg-opacity-25">
+                                <h6 class="card-title mb-0">
+                                    <i class="fas fa-edit text-warning"></i> Manual Price Override
+                                    {% if card.is_manual_override %}
+                                        <span class="badge bg-warning text-dark ms-2">ACTIVE</span>
+                                    {% endif %}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted mb-3">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Override Yuyu-tei pricing with your own price. Useful when the algorithm doesn't pick the right price.
+                                    <strong>Yuyu-tei updates will be skipped when override is active.</strong>
+                                </p>
+                                
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="enable_manual_override" name="enable_manual_override" 
+                                           {% if card.is_manual_override %}checked{% endif %} onchange="toggleManualPriceInputs()">
+                                    <label class="form-check-label" for="enable_manual_override">
+                                        <strong>Enable Manual Price Override</strong>
+                                    </label>
+                                </div>
+                                
+                                <div id="manual-price-inputs" {% if not card.is_manual_override %}style="display: none;"{% endif %}>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="manual_price_yen" class="form-label">Manual Price (¥)</label>
+                                                <input type="number" class="form-control" id="manual_price_yen" name="manual_price_yen" 
+                                                       step="0.01" min="0" value="{{ card.manual_price_yen if card.manual_price_yen else '' }}"
+                                                       placeholder="Enter your price in JPY">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="manual_price_sgd" class="form-label">Manual Price (S$)</label>
+                                                <input type="number" class="form-control" id="manual_price_sgd" name="manual_price_sgd" 
+                                                       step="0.01" min="0" value="{{ card.manual_price_sgd if card.manual_price_sgd else '' }}"
+                                                       placeholder="Auto-calculated from JPY">
+                                                <div class="form-text">Auto-converts from JPY price above</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
                         <div class="card mb-3">
                             <div class="card-body">
-                                <h6 class="card-title">Current Market Information</h6>
+                                <h6 class="card-title">
+                                    Current Market Information
+                                    {% if card.is_manual_override %}
+                                        <span class="badge bg-warning text-dark ms-2">Manual Override Active</span>
+                                    {% endif %}
+                                </h6>
                                 <div class="row">
                                     <div class="col-md-6">
                                         <p class="mb-1"><strong>Current Price:</strong> ¥{{ "{:,.0f}".format(card.current_price_yen) }}</p>
@@ -131,21 +194,61 @@
 
 {% block scripts %}
 <script>
-    // Auto-calculate SGD from Yen when exchange rate is available
+    const exchangeRate = {{ JPY_TO_SGD_RATE }}; // Use server-side exchange rate
+    
+    // Auto-calculate SGD from Yen for purchase price
     const yenInput = document.getElementById('purchase_price_yen');
     const sgdInput = document.getElementById('purchase_price_sgd');
-    const exchangeRate = 0.009; // Approximate JPY to SGD rate
+    
+    if (yenInput && sgdInput) {
+        yenInput.addEventListener('input', function() {
+            if (this.value) {
+                sgdInput.value = (parseFloat(this.value) * exchangeRate).toFixed(2);
+            }
+        });
 
-    yenInput.addEventListener('input', function() {
-        if (this.value) {
-            sgdInput.value = (parseFloat(this.value) * exchangeRate).toFixed(2);
-        }
-    });
+        sgdInput.addEventListener('input', function() {
+            if (this.value) {
+                yenInput.value = (parseFloat(this.value) / exchangeRate).toFixed(0);
+            }
+        });
+    }
+    
+    // Auto-calculate SGD from Yen for manual override prices
+    const manualYenInput = document.getElementById('manual_price_yen');
+    const manualSgdInput = document.getElementById('manual_price_sgd');
+    
+    if (manualYenInput && manualSgdInput) {
+        manualYenInput.addEventListener('input', function() {
+            if (this.value) {
+                manualSgdInput.value = (parseFloat(this.value) * exchangeRate).toFixed(2);
+            } else {
+                manualSgdInput.value = '';
+            }
+        });
 
-    sgdInput.addEventListener('input', function() {
-        if (this.value) {
-            yenInput.value = (parseFloat(this.value) / exchangeRate).toFixed(0);
+        manualSgdInput.addEventListener('input', function() {
+            if (this.value) {
+                manualYenInput.value = (parseFloat(this.value) / exchangeRate).toFixed(0);
+            } else {
+                manualYenInput.value = '';
+            }
+        });
+    }
+    
+    // Toggle manual price inputs
+    function toggleManualPriceInputs() {
+        const checkbox = document.getElementById('enable_manual_override');
+        const inputs = document.getElementById('manual-price-inputs');
+        
+        if (checkbox.checked) {
+            inputs.style.display = '';
+        } else {
+            inputs.style.display = 'none';
+            // Clear manual prices when disabled
+            if (manualYenInput) manualYenInput.value = '';
+            if (manualSgdInput) manualSgdInput.value = '';
         }
-    });
+    }
 </script>
 {% endblock %}

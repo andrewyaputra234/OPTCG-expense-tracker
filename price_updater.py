@@ -26,14 +26,30 @@ def update_all_card_prices():
         
         for card in cards:
             try:
+                # Skip miscellaneous cards (no Yuyu-tei pricing)
+                if card.category == 'Miscellaneous':
+                    print(f"Skipping {card.card_number}: {card.name} (Miscellaneous - manual pricing only)")
+                    continue
+                
+                # Skip cards with manual price override
+                if card.is_manual_override:
+                    print(f"Skipping {card.card_number}: {card.name} (Manual price override active)")
+                    continue
+                    
                 print(f"Updating {card.card_number}: {card.name}...")
                 
                 # Fetch current price from Yuyu-tei (get all variants)
                 price_data = get_yuyutei_prices_by_card_number(card.card_number)
                 
                 if price_data and len(price_data) > 0:
-                    # Filter for reasonable prices (between ¥50 and ¥50000)
-                    valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
+                    # Filter for reasonable prices - higher upper limit for Manga cards
+                    if card.category == 'Mangas':
+                        # Manga cards can be very expensive (up to ¥500,000+)
+                        valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 1000000]
+                        print(f"  Manga card: Using extended price range (¥50 - ¥1,000,000)")
+                    else:
+                        # Regular cards: more conservative range
+                        valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 100000]
                     
                     if valid_prices:
                         # Priority order for highest price selection:
@@ -42,9 +58,14 @@ def update_all_card_prices():
                         # 3. Others use first result
                         if card.category == 'Mangas':
                             # Manga cards ALWAYS get the absolute highest price
+                            print(f"  📚 MANGA CARD PROCESSING:")
+                            print(f"     Found {len(valid_prices)} valid price options:")
+                            for i, price_option in enumerate(sorted(valid_prices, key=lambda x: x.get('price_yen', 0), reverse=True)):
+                                print(f"     #{i+1}: ¥{price_option.get('price_yen', 0):,} - {price_option.get('name', 'Unknown')}")
+                            
                             selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
                             current_price_yen = selected_card.get('price_yen', 0)
-                            print(f"  Manga card detected - using HIGHEST price: ¥{current_price_yen:,}")
+                            print(f"  ✅ SELECTED HIGHEST: ¥{current_price_yen:,} - {selected_card.get('name', 'Unknown')}")
                         elif card.category == 'SP':
                             # SP cards get highest price
                             selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
@@ -53,7 +74,16 @@ def update_all_card_prices():
                             current_price_yen = valid_prices[0].get('price_yen', 0)
                         current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
                     else:
-                        print(f"  No valid prices found for {card.card_number} (prices out of range)")
+                        print(f"  ❌ NO VALID PRICES found for {card.card_number}")
+                        print(f"     Raw price data returned: {len(price_data)} results")
+                        for i, raw_price in enumerate(price_data[:3]):  # Show first 3 results
+                            price_val = raw_price.get('price_yen', 0)
+                            price_name = raw_price.get('name', 'Unknown')
+                            if card.category == 'Mangas':
+                                in_range = 50 <= price_val <= 1000000
+                            else:
+                                in_range = 50 <= price_val <= 100000
+                            print(f"     #{i+1}: ¥{price_val:,} - {price_name} [{'✅' if in_range else '❌ OUT OF RANGE'}]")
                         error_count += 1
                         continue
                     
@@ -87,7 +117,11 @@ def update_all_card_prices():
                     
                     updated_count += 1
                 else:
-                    print(f"  No price data found for {card.card_number}")
+                    print(f"  ❌ NO PRICE DATA found on Yuyu-tei for {card.card_number}")
+                    print(f"     This could mean:")
+                    print(f"     - Card not available on Yuyu-tei")
+                    print(f"     - Card number format not recognized")
+                    print(f"     - Yuyu-tei website connection issues")
                     error_count += 1
                     
             except Exception as e:
