@@ -16,12 +16,13 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # --- UPDATED HELPER FUNCTION FOR LIVE PRICING ---
-def get_yuyutei_prices_by_card_number(card_number_raw):
+def get_yuyutei_prices_by_card_number(card_number_raw, category=None):
     """
     Fetch all available prices for a card number from Yuyu-tei's search page.
     
     Args:
         card_number_raw (str): e.g. 'OP01-025' or 'OP01-121'
+        category (str, optional): Filter by category like 'SP', 'AA', 'SEC', 'Mangas', etc.
     Returns:
         List[Dict] or None: A list of dictionaries with card details and prices.
     """
@@ -50,32 +51,127 @@ def get_yuyutei_prices_by_card_number(card_number_raw):
 
             results = []
             for card_element in matching_cards:
-                # Use Playwright selectors to find the correct elements
-                # The name and card number are in a span with a specific class
-                name_and_number_element = card_element.locator("span.d-block.border")
-                # The price is in a strong tag
-                price_element = card_element.locator("strong")
-                # The rarity is in a span with the class "tag"
-                rarity_element = card_element.locator("span.tag")
+                # Get all text content from the card element to analyze
+                full_text = card_element.text_content()
                 
-                # Check if the extracted elements contain the correct card number to prevent false positives
-                if card_number_formatted not in name_and_number_element.text_content():
+                # Check if this card matches our card number
+                if card_number_formatted not in full_text:
                     continue
 
-                name_text = name_and_number_element.text_content().strip() if name_and_number_element.count() > 0 else "Unknown Name"
+                # Extract different parts of the card information
+                # Try multiple selectors to get the most complete information
+                name_element = card_element.locator("span.d-block.border, .card-name, h3, .product-name").first
+                price_element = card_element.locator("strong, .price, .sell-price").first
+                rarity_element = card_element.locator("span.tag, .rarity, .card-rarity").first
+                
+                # Get the card name/title (which should include variant info)
+                if name_element.count() > 0:
+                    name_text = name_element.text_content().strip()
+                else:
+                    # Fallback: try to extract from full text
+                    lines = full_text.split('\n')
+                    name_text = next((line.strip() for line in lines if card_number_formatted in line), "Unknown Name")
+                
+                # Get price
                 price_text = price_element.text_content().strip() if price_element.count() > 0 else "0"
+                
+                # Get rarity/condition info
                 rarity_text = rarity_element.text_content().strip() if rarity_element.count() > 0 else "Normal"
+                
+                # Check for variant labels that appear on Yuyu-tei cards (like P-SR, SP, SR, etc.)
+                full_text_lower = full_text.lower()
+                variant_keywords = []
+                
+                # Look for specific Yuyu-tei variant labels
+                if 'p-sr' in full_text_lower or 'psr' in full_text_lower:
+                    variant_keywords.extend(['Parallel', 'SR'])
+                elif 'p-r' in full_text_lower or 'pr' in full_text_lower:
+                    variant_keywords.extend(['Parallel', 'R'])
+                elif 'p-c' in full_text_lower or 'pc' in full_text_lower:
+                    variant_keywords.extend(['Parallel', 'C'])
+                elif 'sp' in full_text_lower and 'sp card' in full_text_lower:
+                    variant_keywords.append('SP')
+                elif 'sr card' in full_text_lower or (rarity_text.lower() in ['sr', 'super rare']):
+                    variant_keywords.append('SR')
+                elif 'sec card' in full_text_lower or 'secret' in full_text_lower:
+                    variant_keywords.append('SEC')
+                elif 'l card' in full_text_lower or 'leader card' in full_text_lower:
+                    variant_keywords.append('Leader')
+                
+                # Additional checks for other variant indicators (can be combined with above)
+                # Check for Manga illustrations (independent of other variants)
+                if 'manga' in full_text_lower or 'illustration' in full_text_lower or 'マンガ' in full_text_lower:
+                    variant_keywords.append('Manga')
+                
+                # Fallback checks for other variant indicators
+                if not variant_keywords:
+                    if 'parallel' in full_text_lower or 'パラレル' in full_text_lower:
+                        variant_keywords.append('Parallel')
+                    if 'special' in full_text_lower:
+                        variant_keywords.append('SP')
+                    if 'alternate art' in full_text_lower or 'aa' in full_text_lower:
+                        variant_keywords.append('AA')
+                
+                # Remove duplicates while preserving order
+                variant_keywords = list(dict.fromkeys(variant_keywords))
+                
+                # Enhance name with variant info if found
+                if variant_keywords:
+                    enhanced_name = f"{name_text} ({'/'.join(variant_keywords)})"
+                else:
+                    enhanced_name = name_text
 
                 # Extract the price (digits only)
                 price_match = re.search(r'(\d{1,3}(?:,\d{3})*)', price_text)
                 price = int(price_match.group(1).replace(',', '')) if price_match else None
                 
-                results.append({
-                    'name': name_text,
-                    'card_number': card_number_formatted,
-                    'rarity': rarity_text,
-                    'price_yen': price
-                })
+                # Category filtering based on variant keywords and full text
+                card_matches_category = True
+                if category:
+                    category_lower = category.lower()
+                    full_text_lower = full_text.lower()
+                    enhanced_name_lower = enhanced_name.lower()
+                    
+                    # Category mapping for filtering based on Yuyu-tei variant labels
+                    if category_lower == 'sp':
+                        # SP includes both SP cards and Parallel variants (P-SR, P-R, P-C)
+                        card_matches_category = ('SP' in variant_keywords or 
+                                               'Parallel' in variant_keywords or
+                                               'sp card' in full_text_lower or
+                                               any('p-' in full_text_lower for _ in ['p-sr', 'p-r', 'p-c']))
+                    elif category_lower == 'aa ldr':
+                        card_matches_category = (('AA' in variant_keywords or 'alternate art' in full_text_lower) and 
+                                               ('Leader' in variant_keywords or 'leader' in full_text_lower))
+                    elif category_lower == 'aa':
+                        card_matches_category = (('AA' in variant_keywords or 'alternate art' in full_text_lower) and 
+                                               not ('Leader' in variant_keywords or 'leader' in full_text_lower))
+                    elif category_lower == 'sec':
+                        card_matches_category = ('SEC' in variant_keywords or 
+                                               'sec card' in full_text_lower or 
+                                               'secret' in full_text_lower)
+                    elif category_lower == 'sr':
+                        # Regular SR cards (not parallel)
+                        card_matches_category = ('SR' in variant_keywords and 'Parallel' not in variant_keywords) or \
+                                               ('sr card' in full_text_lower and 'p-sr' not in full_text_lower)
+                    elif category_lower == 'mangas':
+                        card_matches_category = ('Manga' in variant_keywords or 
+                                               'illustration' in full_text_lower)
+                    elif category_lower == 'regular':
+                        # Regular cards - no special variants
+                        card_matches_category = (len(variant_keywords) == 0 or 
+                                               (len(variant_keywords) == 1 and variant_keywords[0] in ['R', 'C', 'UC']))
+                
+                if card_matches_category:
+                    results.append({
+                        'name': enhanced_name,
+                        'original_name': name_text,
+                        'card_number': card_number_formatted,
+                        'rarity': rarity_text,
+                        'price_yen': price,
+                        'variant_keywords': variant_keywords,
+                        'category_match': category if category else 'any',
+                        'full_text_sample': full_text[:200] + "..." if len(full_text) > 200 else full_text
+                    })
             
             browser.close()
             
@@ -187,14 +283,8 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
     if image_paths:
         for image_path in image_paths:
             try:
-                print(f"DEBUG AI: Processing image: {os.path.basename(image_path)}")
                 with open(image_path, "rb") as image_file:
-                    image_data = image_file.read()
-                    # Create a simple hash to verify we're getting different images
-                    import hashlib
-                    image_hash = hashlib.md5(image_data).hexdigest()[:8]
-                    print(f"DEBUG AI: Image size: {len(image_data)} bytes, hash: {image_hash}")
-                    base64_image = base64.b64encode(image_data).decode('utf-8')
+                    base64_image = base64.b64encode(image_file.read()).decode('utf-8')
                 content_list.append({
                     "type": "image_url",
                     "image_url": {
@@ -205,13 +295,6 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
                 return {"error": f"Error processing image file: {e}"}
 
     messages.append({"role": "user", "content": content_list})
-    
-    print(f"DEBUG AI: Sending {len(content_list)} content items to OpenAI")
-    for i, content in enumerate(content_list):
-        if content['type'] == 'text':
-            print(f"DEBUG AI: Content {i}: Text - '{content['text'][:100]}...'")
-        elif content['type'] == 'image_url':
-            print(f"DEBUG AI: Content {i}: Image - {len(content['image_url']['url'])} chars")
 
     try:
         response = client.chat.completions.create(
@@ -221,19 +304,15 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
         )
         
         ai_response_content = response.choices[0].message.content
-        print(f"DEBUG AI: Raw AI response: {ai_response_content[:500]}...")
         
         if ai_response_content is None:
             return {"error": "AI response content was empty. The AI may not have been able to process the request."}
         
         json_match = re.search(r'(\[.*?\]|\{.*?\})', ai_response_content, re.DOTALL)
-        print(f"DEBUG AI: JSON match found: {json_match is not None}")
         
         if json_match:
             json_string = json_match.group(1)
-            print(f"DEBUG AI: Extracted JSON: {json_string[:200]}...")
             raw_card_data = json.loads(json_string)
-            print(f"DEBUG AI: Parsed {len(raw_card_data) if isinstance(raw_card_data, list) else 'non-list'} cards")
 
             if not isinstance(raw_card_data, list):
                 card_list = [raw_card_data]

@@ -10,6 +10,40 @@ inventory_bp = Blueprint('inventory', __name__, template_folder='../templates')
 # Exchange rate (updated to more current rate)
 JPY_TO_SGD_RATE = 0.0086  # More accurate JPY to SGD rate as of 2024/2025
 
+def detect_category_from_text(text):
+    """Auto-detect category from user input text (case-insensitive)"""
+    if not text:
+        return None
+    
+    text_lower = text.lower()
+    
+    # Priority order - check for specific keywords
+    # Check for manga variants first (highest priority)
+    if any(keyword in text_lower for keyword in ['manga', 'mangas']):
+        return 'Mangas'
+    
+    # Check for SP variants
+    if any(keyword in text_lower for keyword in ['sp', 'special']):
+        return 'SP'
+    
+    # Check for AA LDR variants
+    if any(keyword in text_lower for keyword in ['aa ldr', 'aa leader', 'alternative art leader', 'alt art leader', 'leader aa', 'ldr aa']):
+        return 'AA LDR'
+    
+    # Check for SEC variants
+    if any(keyword in text_lower for keyword in ['sec', 'secret', 'secret rare']):
+        return 'SEC'
+    
+    # Check for AA variants (but not AA LDR)
+    if any(keyword in text_lower for keyword in ['aa', 'alternative art', 'alt art']) and 'leader' not in text_lower and 'ldr' not in text_lower:
+        return 'AA'
+    
+    # Check for SR variants
+    if any(keyword in text_lower for keyword in ['sr', 'super rare']):
+        return 'SR'
+    
+    return None
+
 @inventory_bp.route('/')
 def inventory_list():
     """Display all inventory cards with current values and trends"""
@@ -99,7 +133,7 @@ def add_inventory_card():
         notes = request.form.get('notes', '')
         
         try:
-            # Fetch current market price from Yuyu-tei
+            # Fetch current market price from Yuyu-tei (get all variants)
             price_data = get_yuyutei_prices_by_card_number(card_number)
             
             if price_data and len(price_data) > 0:
@@ -107,8 +141,21 @@ def add_inventory_card():
                 valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
                 
                 if valid_prices:
-                    # Use the first valid result
-                    card_info = valid_prices[0]
+                    # Priority order for highest price selection:
+                    # 1. Mangas (ALWAYS highest price - top priority)
+                    # 2. SP (second highest value)
+                    # 3. Others use first result
+                    if category == 'Mangas':
+                        # Manga cards ALWAYS get the absolute highest price
+                        card_info = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                        print(f"Manga card detected - using HIGHEST price: ¥{card_info.get('price_yen', 0):,}")
+                    elif category == 'SP':
+                        # SP cards get highest price
+                        card_info = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                    else:
+                        # For other categories, use the first valid result
+                        card_info = valid_prices[0]
+                    
                     current_price_yen = card_info.get('price_yen', 0)
                     current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
                 else:
@@ -221,7 +268,24 @@ def add_inventory_card_with_ai():
                     if not card_number:
                         continue
                     
-                    # Fetch live pricing data - keep in JPY
+                    # Auto-detect category: First from user description, then from rarity
+                    category = detect_category_from_text(user_description)
+                    
+                    if not category:
+                        # Fall back to rarity-based detection
+                        rarity = card_data.get('rarity', '')
+                        if rarity.upper() in ['SEC', 'SECRET']:
+                            category = 'SEC'
+                        elif rarity.upper() in ['SR', 'SUPER RARE']:
+                            category = 'SR'
+                        elif rarity.upper() in ['L', 'LEADER']:
+                            category = 'AA LDR'
+                        else:
+                            category = 'Regular'
+                    
+                    print(f"Auto-detected category: {category} (from description: '{user_description}')")
+                    
+                    # Fetch live pricing data (get all variants) - keep in JPY
                     price_data = get_yuyutei_prices_by_card_number(card_number)
                     current_price_yen = 0
                     current_price_sgd = 0
@@ -230,7 +294,21 @@ def add_inventory_card_with_ai():
                         # Filter for reasonable prices (between ¥50 and ¥50000)
                         valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
                         if valid_prices:
-                            current_price_yen = valid_prices[0].get('price_yen', 0)
+                            # Priority order for highest price selection:
+                            # 1. Mangas (ALWAYS highest price - top priority)
+                            # 2. SP (second highest value)
+                            # 3. Others use first result
+                            if category == 'Mangas':
+                                # Manga cards ALWAYS get the absolute highest price
+                                selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                                current_price_yen = selected_card.get('price_yen', 0)
+                                print(f"Manga card detected - using HIGHEST price: ¥{current_price_yen:,}")
+                            elif category == 'SP':
+                                # SP cards get highest price
+                                selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                                current_price_yen = selected_card.get('price_yen', 0)
+                            else:
+                                current_price_yen = valid_prices[0].get('price_yen', 0)
                             current_price_sgd = current_price_yen * JPY_TO_SGD_RATE  # For display only
                     
                     # Convert purchase price - focus on JPY
@@ -245,16 +323,7 @@ def add_inventory_card_with_ai():
                         purchase_price_yen = purchase_price_original
                         purchase_price_sgd = purchase_price_original * JPY_TO_SGD_RATE
                     
-                    # Auto-detect category based on rarity
-                    rarity = card_data.get('rarity', '')
-                    if rarity.upper() in ['SEC', 'SECRET']:
-                        category = 'SEC'
-                    elif rarity.upper() in ['SR', 'SUPER RARE']:
-                        category = 'SR'
-                    elif rarity.upper() in ['L', 'LEADER']:
-                        category = 'AA LDR'
-                    else:
-                        category = 'Regular'
+                    # Category already determined above
                     
                     # Create inventory card
                     new_card = InventoryCard(
@@ -362,7 +431,28 @@ def update_all_prices():
             price_data = get_yuyutei_prices_by_card_number(card.card_number)
             
             if price_data and len(price_data) > 0:
-                current_price_yen = price_data[0].get('price_yen', 0)
+                # Filter for reasonable prices (between ¥50 and ¥50000)
+                valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
+                
+                if valid_prices:
+                    # Priority order for highest price selection:
+                    # 1. Mangas (ALWAYS highest price - top priority)
+                    # 2. SP (second highest value) 
+                    # 3. Others use first result
+                    if card.category == 'Mangas':
+                        # Manga cards ALWAYS get the absolute highest price
+                        selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                        current_price_yen = selected_card.get('price_yen', 0)
+                        print(f"Manga card detected - using HIGHEST price: ¥{current_price_yen:,}")
+                    elif card.category == 'SP':
+                        # SP cards get highest price
+                        selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                        current_price_yen = selected_card.get('price_yen', 0)
+                    else:
+                        current_price_yen = valid_prices[0].get('price_yen', 0)
+                else:
+                    current_price_yen = 0
+                    
                 current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
                 
                 # Update card's current price

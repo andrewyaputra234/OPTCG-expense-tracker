@@ -28,7 +28,7 @@ def update_all_card_prices():
             try:
                 print(f"Updating {card.card_number}: {card.name}...")
                 
-                # Fetch current price from Yuyu-tei
+                # Fetch current price from Yuyu-tei (get all variants)
                 price_data = get_yuyutei_prices_by_card_number(card.card_number)
                 
                 if price_data and len(price_data) > 0:
@@ -36,7 +36,21 @@ def update_all_card_prices():
                     valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
                     
                     if valid_prices:
-                        current_price_yen = valid_prices[0].get('price_yen', 0)
+                        # Priority order for highest price selection:
+                        # 1. Mangas (ALWAYS highest price - top priority)
+                        # 2. SP (second highest value)
+                        # 3. Others use first result
+                        if card.category == 'Mangas':
+                            # Manga cards ALWAYS get the absolute highest price
+                            selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                            current_price_yen = selected_card.get('price_yen', 0)
+                            print(f"  Manga card detected - using HIGHEST price: ¥{current_price_yen:,}")
+                        elif card.category == 'SP':
+                            # SP cards get highest price
+                            selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                            current_price_yen = selected_card.get('price_yen', 0)
+                        else:
+                            current_price_yen = valid_prices[0].get('price_yen', 0)
                         current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
                     else:
                         print(f"  No valid prices found for {card.card_number} (prices out of range)")
