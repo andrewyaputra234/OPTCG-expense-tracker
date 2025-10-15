@@ -5,75 +5,31 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-md-10">
+        <div class="col-md-8">
             <div class="card">
                 <div class="card-header">
                     <h4 class="mb-0">Add Card to Inventory</h4>
-                    <div class="mt-2">
-                        <div class="btn-group" role="group" aria-label="Input method">
-                            <input type="radio" class="btn-check" name="input_method" id="manual_method" checked>
-                            <label class="btn btn-outline-primary" for="manual_method">Manual Entry</label>
-                            
-                            <input type="radio" class="btn-check" name="input_method" id="ai_method">
-                            <label class="btn btn-outline-success" for="ai_method">AI Recognition</label>
-                        </div>
-                    </div>
                 </div>
                 <div class="card-body">
-                    <!-- Manual Entry Form -->
-                    <form method="POST" id="manual_form" enctype="multipart/form-data">
-                        <input type="hidden" name="use_ai" id="use_ai_input" value="false">
-                        
-                        <!-- AI Recognition Section (Hidden by default) -->
-                        <div id="ai_section" class="d-none mb-4">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="mb-3">
-                                        <label for="card_image" class="form-label">Card Image(s)</label>
-                                        <input type="file" class="form-control" id="card_image" name="card_image" 
-                                               accept="image/*" multiple>
-                                        <div class="form-text">Upload one or more card images for AI recognition</div>
-                                    </div>
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="card_number" class="form-label">Card Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="card_number" name="card_number" 
+                                           placeholder="e.g., OP01-025" required>
+                                    <div class="form-text">Enter the card number to fetch live pricing data</div>
                                 </div>
                             </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="mb-3">
-                                        <label for="card_description" class="form-label">Card Description (Optional)</label>
-                                        <textarea class="form-control" id="card_description" name="card_description" rows="2" 
-                                                  placeholder="Optional: Describe the card if the image isn't clear..."></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i> 
-                                <strong>AI Mode:</strong> Upload card image(s) and the AI will automatically detect the card details, 
-                                including card number, name, and rarity. The system will then fetch live pricing data.
-                            </div>
-                        </div>
-
-                        <!-- Manual Entry Section -->
-                        <div id="manual_section">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="card_number" class="form-label">Card Number <span class="text-danger" id="card_number_required">*</span></label>
-                                        <input type="text" class="form-control" id="card_number" name="card_number" 
-                                               placeholder="e.g., OP01-025">
-                                        <div class="form-text">Enter the card number to fetch live pricing data</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label for="quantity" class="form-label">Quantity</label>
-                                        <input type="number" class="form-control" id="quantity" name="quantity" 
-                                               value="1" min="1" required>
-                                    </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="quantity" class="form-label">Quantity</label>
+                                    <input type="number" class="form-control" id="quantity" name="quantity" 
+                                           value="1" min="1" required>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Common Purchase Information -->
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -126,7 +82,7 @@
                                 <i class="fas fa-arrow-left"></i> Back to Inventory
                             </a>
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> <span id="submit_text">Add to Inventory</span>
+                                <i class="fas fa-plus"></i> Add to Inventory
                             </button>
                         </div>
                     </form>
@@ -135,32 +91,15 @@
 
             <div class="card mt-4">
                 <div class="card-header">
-                    <h6 class="mb-0">Currency Tracking System</h6>
+                    <h6 class="mb-0">How it works</h6>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-danger">Yen Tracking (Primary)</h6>
-                            <ul class="small">
-                                <li>Automatically fetched from Yuyu-tei daily</li>
-                                <li>Shows live market price trends</li>
-                                <li>Main focus for price analysis</li>
-                                <li>Always tracked for every card</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="text-info">SGD Tracking (Secondary)</h6>
-                            <ul class="small">
-                                <li>Use for cards you bought locally</li>
-                                <li>Manual price updates only</li>
-                                <li>Optional - only if you enter SGD purchase price</li>
-                                <li>For comparing local vs Japanese market</li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="alert alert-info mt-3">
-                        <strong>Tip:</strong> Leave SGD empty if you want to focus only on Yen price trends. Enter SGD purchase price if you bought the card locally in Singapore.
-                    </div>
+                    <ol class="mb-0">
+                        <li>Enter the card number (e.g., OP01-025)</li>
+                        <li>The system will automatically fetch the current market price from Yuyu-tei</li>
+                        <li>Enter your purchase details for tracking performance</li>
+                        <li>The card will be added to your inventory with daily price tracking enabled</li>
+                    </ol>
                 </div>
             </div>
         </div>
@@ -184,51 +123,6 @@
     sgdInput.addEventListener('input', function() {
         if (this.value && !yenInput.value) {
             yenInput.value = (parseFloat(this.value) / exchangeRate).toFixed(0);
-        }
-    });
-
-    // Handle input method toggle
-    const manualMethodRadio = document.getElementById('manual_method');
-    const aiMethodRadio = document.getElementById('ai_method');
-    const aiSection = document.getElementById('ai_section');
-    const manualSection = document.getElementById('manual_section');
-    const useAiInput = document.getElementById('use_ai_input');
-    const cardNumberInput = document.getElementById('card_number');
-    const cardNumberRequired = document.getElementById('card_number_required');
-    const submitText = document.getElementById('submit_text');
-
-    function toggleInputMethod() {
-        if (aiMethodRadio.checked) {
-            // AI mode
-            aiSection.classList.remove('d-none');
-            manualSection.classList.add('d-none');
-            useAiInput.value = 'true';
-            cardNumberInput.removeAttribute('required');
-            cardNumberRequired.style.display = 'none';
-            submitText.textContent = 'Process with AI';
-        } else {
-            // Manual mode
-            aiSection.classList.add('d-none');
-            manualSection.classList.remove('d-none');
-            useAiInput.value = 'false';
-            cardNumberInput.setAttribute('required', 'required');
-            cardNumberRequired.style.display = 'inline';
-            submitText.textContent = 'Add to Inventory';
-        }
-    }
-
-    manualMethodRadio.addEventListener('change', toggleInputMethod);
-    aiMethodRadio.addEventListener('change', toggleInputMethod);
-
-    // Initialize the correct mode
-    toggleInputMethod();
-
-    // File upload preview
-    const fileInput = document.getElementById('card_image');
-    fileInput.addEventListener('change', function() {
-        const files = this.files;
-        if (files.length > 0) {
-            console.log(`Selected ${files.length} file(s) for processing`);
         }
     });
 </script>

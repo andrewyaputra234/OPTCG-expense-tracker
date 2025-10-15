@@ -1,23 +1,22 @@
 @echo off
-REM Daily price update script for OPTCG Inventory Tracker
-REM Run this script daily to update card prices automatically
+echo Starting Daily Price Update...
+echo.
 
+:: Change to the project directory
 cd /d "C:\Users\User\OneDrive\Documents\GitHub\OPTCG-expense-tracker"
 
-echo Starting daily price update...
-echo %date% %time% >> price_update.log
+:: Run the price updater
+python price_updater.py
 
-REM Activate virtual environment if you have one
-REM call venv\Scripts\activate
+echo.
+echo Price update completed at %DATE% %TIME%
+echo.
 
-REM Run the price updater
-python price_updater.py update >> price_update.log 2>&1
+:: Optional: Add logging
+echo %DATE% %TIME% - Price update completed >> price_update.log
 
-if %ERRORLEVEL% EQU 0 (
-    echo Price update completed successfully >> price_update.log
-) else (
-    echo Price update failed with error code %ERRORLEVEL% >> price_update.log
-)
+:: Keep the window open for a few seconds to see results
+timeout /t 5
 
-echo %date% %time% Price update finished >> price_update.log
-echo. >> price_update.log
+:: Uncomment the next line if you want to keep the window open until user presses a key
+:: pause

@@ -103,15 +103,12 @@
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
-                        <div class="col-4">
-                            <h6 class="text-muted">Current (¥)</h6>
+                        <div class="col-6">
+                            <h6 class="text-muted">Current Price</h6>
                             <h4 class="text-primary">¥{{ card.current_price_yen|int }}</h4>
+                            <p class="text-primary mb-0">${{ "%.2f"|format(card.current_price_sgd) }}</p>
                         </div>
-                        <div class="col-4">
-                            <h6 class="text-muted">Current (SGD)</h6>
-                            <h4 class="text-primary">${{ "%.2f"|format(card.current_price_sgd) }}</h4>
-                        </div>
-                        <div class="col-4">
+                        <div class="col-6">
                             <h6 class="text-muted">Total Value</h6>
                             <h4 class="text-success">${{ "%.2f"|format(card.current_price_sgd * card.quantity) }}</h4>
                             <p class="text-muted mb-0">{{ card.quantity }} cards</p>
@@ -120,14 +117,11 @@
                     <hr>
                     <div class="text-center">
                         <small class="text-muted">
-                            Yen updated: 
-                            {% if card.last_price_update_yen %}
-                                {{ card.last_price_update_yen.strftime('%b %d, %Y at %H:%M') }}
+                            Last updated: 
+                            {% if card.last_price_update %}
+                                {{ card.last_price_update.strftime('%b %d, %Y at %H:%M') }}
                             {% else %}
                                 Never
-                            {% endif %}
-                            {% if card.track_sgd_trends and card.last_price_update_sgd %}
-                                <br>SGD updated: {{ card.last_price_update_sgd.strftime('%b %d, %Y at %H:%M') }}
                             {% endif %}
                         </small>
                     </div>
@@ -158,15 +152,11 @@
                     <hr>
                     
                     <div class="row">
-                        <div class="col-4 text-center">
-                            <h6 class="text-muted">Purchase (¥)</h6>
-                            <p class="mb-0">¥{{ card.purchase_price_yen|int }}</p>
-                        </div>
-                        <div class="col-4 text-center">
-                            <h6 class="text-muted">Purchase (SGD)</h6>
+                        <div class="col-6 text-center">
+                            <h6 class="text-muted">Purchase Price</h6>
                             <p class="mb-0">${{ "%.2f"|format(card.purchase_price_sgd) }}</p>
                         </div>
-                        <div class="col-4 text-center">
+                        <div class="col-6 text-center">
                             <h6 class="text-muted">Total Invested</h6>
                             <p class="mb-0">${{ "%.2f"|format(card.purchase_price_sgd * card.quantity) }}</p>
                         </div>
@@ -225,100 +215,47 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Load price history data and create chart - FOCUS on YEN trends
+// Load price history data and create chart
 fetch('{{ url_for("inventory.get_card_price_data", card_id=card.id) }}')
     .then(response => response.json())
     .then(data => {
         const ctx = document.getElementById('priceChart').getContext('2d');
         
-        // Create datasets - PRIMARY focus on YEN
-        const datasets = [{
-            label: 'Price (¥) - Primary',
-            data: data.prices_yen,
-            borderColor: 'rgb(255, 99, 132)',      // Red for Yen (primary)
-            backgroundColor: 'rgba(255, 99, 132, 0.1)',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.1,
-            yAxisID: 'y'
-        }];
-        
-        // Add SGD dataset only if available
-        if (data.has_sgd_data && data.prices_sgd.length > 0) {
-            datasets.push({
-                label: 'Price (SGD) - Secondary',
-                data: data.prices_sgd,
-                borderColor: 'rgb(75, 192, 192)',      // Blue for SGD (secondary)
-                backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                borderWidth: 2,
-                fill: false,
-                tension: 0.1,
-                yAxisID: 'y1'
-            });
-        }
-        
-        const scales = {
-            y: {
-                type: 'linear',
-                display: true,
-                position: 'left',
-                beginAtZero: false,
-                title: {
-                    display: true,
-                    text: 'Yen (¥) - Primary'
-                },
-                ticks: {
-                    callback: function(value) {
-                        return '¥' + Math.round(value);
-                    }
-                }
-            }
-        };
-        
-        // Add second Y-axis for SGD if available
-        if (data.has_sgd_data && data.prices_sgd.length > 0) {
-            scales.y1 = {
-                type: 'linear',
-                display: true,
-                position: 'right',
-                beginAtZero: false,
-                title: {
-                    display: true,
-                    text: 'SGD ($) - Secondary'
-                },
-                ticks: {
-                    callback: function(value) {
-                        return '$' + value.toFixed(2);
-                    }
-                },
-                grid: {
-                    drawOnChartArea: false,
-                }
-            };
-        }
-        
         new Chart(ctx, {
             type: 'line',
             data: {
                 labels: data.dates.map(date => new Date(date).toLocaleDateString()),
-                datasets: datasets
+                datasets: [{
+                    label: 'Price (SGD)',
+                    data: data.prices_sgd,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1
+                }]
             },
             options: {
                 responsive: true,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
                 plugins: {
                     title: {
                         display: true,
-                        text: data.card_name + ' (' + data.card_number + ') - Price Trends'
+                        text: data.card_name + ' (' + data.card_number + ')'
                     },
                     legend: {
-                        display: datasets.length > 1
+                        display: false
                     }
                 },
-                scales: scales,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        }
+                    }
+                },
                 elements: {
                     point: {
                         radius: 4,

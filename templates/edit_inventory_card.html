@@ -50,25 +50,6 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="current_price_yen" class="form-label">Current Price (¥)</label>
-                                    <input type="number" class="form-control" id="current_price_yen" name="current_price_yen" 
-                                           step="0.01" min="0" value="{{ card.current_price_yen }}">
-                                    <div class="form-text">Override automatic Yuyu-tei price</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="current_price_sgd" class="form-label">Current Price (SGD)</label>
-                                    <input type="number" class="form-control" id="current_price_sgd" name="current_price_sgd" 
-                                           step="0.01" min="0" value="{{ card.current_price_sgd }}">
-                                    <div class="form-text">Manual SGD price (enables SGD tracking)</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
                                     <label for="condition" class="form-label">Condition</label>
                                     <select class="form-select" id="condition" name="condition">
                                         <option value="Near Mint" {% if card.condition == 'Near Mint' %}selected{% endif %}>Near Mint (NM)</option>
@@ -97,25 +78,17 @@
                             <div class="card-body">
                                 <h6 class="card-title">Current Market Information</h6>
                                 <div class="row">
-                                    <div class="col-md-4">
-                                        <p class="mb-1"><strong>Current Price (¥):</strong> ¥{{ card.current_price_yen|int }}</p>
-                                        <p class="mb-1"><strong>Current Price (SGD):</strong> ${{ "%.2f"|format(card.current_price_sgd) }}</p>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <p class="mb-1"><strong>Yen Updated:</strong> 
-                                            {% if card.last_price_update_yen %}
-                                                {{ card.last_price_update_yen.strftime('%b %d, %Y at %H:%M') }}
+                                    <div class="col-md-6">
+                                        <p class="mb-1"><strong>Current Price:</strong> ¥{{ card.current_price_yen|int }} / ${{ "%.2f"|format(card.current_price_sgd) }}</p>
+                                        <p class="mb-1"><strong>Last Updated:</strong> 
+                                            {% if card.last_price_update %}
+                                                {{ card.last_price_update.strftime('%b %d, %Y at %H:%M') }}
                                             {% else %}
                                                 Never
                                             {% endif %}
                                         </p>
-                                        {% if card.track_sgd_trends and card.last_price_update_sgd %}
-                                        <p class="mb-1"><strong>SGD Updated:</strong> 
-                                            {{ card.last_price_update_sgd.strftime('%b %d, %Y at %H:%M') }}
-                                        </p>
-                                        {% endif %}
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         {% set individual_gain_loss = (card.current_price_sgd - card.purchase_price_sgd) * card.quantity %}
                                         {% set individual_gain_loss_percentage = ((card.current_price_sgd - card.purchase_price_sgd) / card.purchase_price_sgd * 100) if card.purchase_price_sgd > 0 else 0 %}
                                         <p class="mb-1"><strong>Current P&L:</strong> 
@@ -125,14 +98,6 @@
                                             </span>
                                         </p>
                                     </div>
-                                </div>
-                                <div class="alert alert-info mt-3">
-                                    <strong>Price Update Info:</strong>
-                                    <ul class="mb-0 mt-2">
-                                        <li><strong>Yen:</strong> Updating will override automatic Yuyu-tei prices and mark as "manual" in price history</li>
-                                        <li><strong>SGD:</strong> Updating will enable SGD tracking and mark prices as "manual"</li>
-                                        <li><strong>History:</strong> Changes are automatically recorded in your price history</li>
-                                    </ul>
                                 </div>
                             </div>
                         </div>

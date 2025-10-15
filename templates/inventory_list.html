@@ -4,11 +4,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div cla                                            <button class="btn btn-sm btn-warning text-dark" title="Quick Price Update" 
-                                                    data-card-id="{{ card.id }}" data-card-number="{{ card.card_number }}"
-                                                    onclick="quickPriceUpdate(this.dataset.cardId, this.dataset.cardNumber)">
-                                                <i class="fas fa-yen-sign me-1"></i>¥
-                                            </button>row">
+    <div class="row">
         <div class="col-md-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>My Card Inventory</h2>
@@ -75,20 +71,19 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped table-hover" style="min-width: 1000px;">
+                        <table class="table table-striped table-hover">
                             <thead class="table-dark">
                                 <tr>
-                                    <th style="width: 20%;">Card</th>
-                                    <th style="width: 8%;">Number</th>
-                                    <th style="width: 6%;">Rarity</th>
-                                    <th style="width: 4%;">Qty</th>
-                                    <th style="width: 8%;">Purchase (¥)</th>
-                                    <th style="width: 8%;">Purchase (SGD)</th>
-                                    <th style="width: 8%;">Current (¥)</th>
-                                    <th style="width: 8%;">Current (SGD)</th>
-                                    <th style="width: 10%;">P&L</th>
-                                    <th style="width: 12%;">Last Updated</th>
-                                    <th style="width: 15%;">Actions</th>
+                                    <th>Card</th>
+                                    <th>Number</th>
+                                    <th>Rarity</th>
+                                    <th>Qty</th>
+                                    <th>Purchase Price</th>
+                                    <th>Current Price</th>
+                                    <th>Total Value</th>
+                                    <th>P&L</th>
+                                    <th>Last Updated</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -116,10 +111,9 @@
                                         </span>
                                     </td>
                                     <td>{{ card.quantity }}</td>
-                                    <td>¥{{ card.purchase_price_yen|int }}</td>
                                     <td>${{ "%.2f"|format(card.purchase_price_sgd) }}</td>
-                                    <td>¥{{ card.current_price_yen|int }}</td>
                                     <td>${{ "%.2f"|format(card.current_price_sgd) }}</td>
+                                    <td>${{ "%.2f"|format(card.current_price_sgd * card.quantity) }}</td>
                                     <td>
                                         <span class="{% if individual_gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
                                             {% if individual_gain_loss >= 0 %}+{% endif %}${{ "%.2f"|format(individual_gain_loss) }}
@@ -127,30 +121,20 @@
                                         </span>
                                     </td>
                                     <td>
-                                        {% if card.last_price_update_yen %}
-                                            <small class="text-success">¥: {{ card.last_price_update_yen.strftime('%m/%d %H:%M') }}</small>
+                                        {% if card.last_price_update %}
+                                            <small>{{ card.last_price_update.strftime('%m/%d %H:%M') }}</small>
                                         {% else %}
-                                            <small class="text-muted">¥: Never</small>
-                                        {% endif %}
-                                        {% if card.track_sgd_trends and card.last_price_update_sgd %}
-                                            <br><small class="text-info">$: {{ card.last_price_update_sgd.strftime('%m/%d %H:%M') }}</small>
+                                            <small class="text-muted">Never</small>
                                         {% endif %}
                                     </td>
-                                    <td style="min-width: 160px;">
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="{{ url_for('inventory.view_card_details', card_id=card.id) }}" 
-                                               class="btn btn-sm btn-primary text-white" title="View Details">
-                                                <i class="fas fa-eye me-1"></i>View
+                                    <td>
+                                        <div class="btn-group-vertical btn-group-sm">
+                                            <a href="{{ url_for('inventory.view_card_details', card_id=card.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="{{ url_for('inventory.edit_inventory_card', card_id=card.id) }}" 
-                                               class="btn btn-sm btn-success text-white" title="Edit Card & Prices">
-                                                <i class="fas fa-edit me-1"></i>Edit
+                                            <a href="{{ url_for('inventory.edit_inventory_card', card_id=card.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-edit"></i>
                                             </a>
-                                            <button class="btn btn-sm btn-warning text-dark" title="Quick Price Update" 
-                                                    data-card-id="{{ card.id }}" data-card-number="{{ card.card_number }}"
-                                                    onclick="quickPriceUpdate(this.dataset.cardId, this.dataset.cardNumber)">
-                                                <i class="fas fa-yen-sign me-1"></i>¥
-                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -176,39 +160,6 @@
 {% endblock %}
 
 {% block scripts %}
-<style>
-    /* Ensure action buttons are always visible and properly sized */
-    .table td {
-        white-space: nowrap;
-    }
-    
-    .btn-group .btn {
-        margin-right: 2px;
-    }
-    
-    .btn-group .btn:last-child {
-        margin-right: 0;
-    }
-    
-    /* Make sure the table doesn't get too cramped */
-    .table-responsive {
-        overflow-x: auto;
-    }
-    
-    /* Action column styling */
-    .table th:last-child,
-    .table td:last-child {
-        text-align: center;
-        min-width: 160px;
-    }
-    
-    /* Ensure button text is visible */
-    .btn-group .btn {
-        font-weight: 500;
-        font-size: 0.75rem;
-    }
-</style>
-
 <script>
     // Auto-refresh prices every 5 minutes when page is active
     let refreshInterval;
@@ -231,29 +182,5 @@
     
     // Start auto-refresh when page loads
     startAutoRefresh();
-    
-    // Quick price update function
-    function quickPriceUpdate(cardId, cardNumber) {
-        const newPrice = prompt(`Enter new Yen price for ${cardNumber}:`, '');
-        
-        if (newPrice && !isNaN(newPrice) && parseFloat(newPrice) >= 0) {
-            // Create a form to submit the price update
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/inventory/card/${cardId}/quick_price_update`;
-            form.style.display = 'none';
-            
-            const priceInput = document.createElement('input');
-            priceInput.type = 'hidden';
-            priceInput.name = 'new_price_yen';
-            priceInput.value = newPrice;
-            
-            form.appendChild(priceInput);
-            document.body.appendChild(form);
-            form.submit();
-        } else if (newPrice !== null) {
-            alert('Please enter a valid price (number >= 0)');
-        }
-    }
 </script>
 {% endblock %}

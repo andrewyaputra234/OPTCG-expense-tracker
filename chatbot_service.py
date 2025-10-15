@@ -187,8 +187,14 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
     if image_paths:
         for image_path in image_paths:
             try:
+                print(f"DEBUG AI: Processing image: {os.path.basename(image_path)}")
                 with open(image_path, "rb") as image_file:
-                    base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+                    image_data = image_file.read()
+                    # Create a simple hash to verify we're getting different images
+                    import hashlib
+                    image_hash = hashlib.md5(image_data).hexdigest()[:8]
+                    print(f"DEBUG AI: Image size: {len(image_data)} bytes, hash: {image_hash}")
+                    base64_image = base64.b64encode(image_data).decode('utf-8')
                 content_list.append({
                     "type": "image_url",
                     "image_url": {
@@ -199,6 +205,13 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
                 return {"error": f"Error processing image file: {e}"}
 
     messages.append({"role": "user", "content": content_list})
+    
+    print(f"DEBUG AI: Sending {len(content_list)} content items to OpenAI")
+    for i, content in enumerate(content_list):
+        if content['type'] == 'text':
+            print(f"DEBUG AI: Content {i}: Text - '{content['text'][:100]}...'")
+        elif content['type'] == 'image_url':
+            print(f"DEBUG AI: Content {i}: Image - {len(content['image_url']['url'])} chars")
 
     try:
         response = client.chat.completions.create(
@@ -208,15 +221,19 @@ def get_card_details_from_ai_multimodal(user_description: str = None, image_path
         )
         
         ai_response_content = response.choices[0].message.content
+        print(f"DEBUG AI: Raw AI response: {ai_response_content[:500]}...")
         
         if ai_response_content is None:
             return {"error": "AI response content was empty. The AI may not have been able to process the request."}
         
         json_match = re.search(r'(\[.*?\]|\{.*?\})', ai_response_content, re.DOTALL)
+        print(f"DEBUG AI: JSON match found: {json_match is not None}")
         
         if json_match:
             json_string = json_match.group(1)
+            print(f"DEBUG AI: Extracted JSON: {json_string[:200]}...")
             raw_card_data = json.loads(json_string)
+            print(f"DEBUG AI: Parsed {len(raw_card_data) if isinstance(raw_card_data, list) else 'non-list'} cards")
 
             if not isinstance(raw_card_data, list):
                 card_list = [raw_card_data]
