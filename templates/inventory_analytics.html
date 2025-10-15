@@ -230,9 +230,9 @@
                                 <div class="col-md-4">
                                     <div class="text-center">
                                         <h6 class="text-light">Most Valuable Card</h6>
-                                        {% if top_gainers %}
-                                            <h4>¥{{ "{:,.0f}".format(top_gainers[0].card.current_price_yen) }}</h4>
-                                            <small class="text-light">{{ top_gainers[0].card.name }}</small>
+                                        {% if most_valuable_card %}
+                                            <h4>¥{{ "{:,.0f}".format(most_valuable_card.current_price_yen) }}</h4>
+                                            <small class="text-light">{{ most_valuable_card.name }}</small>
                                         {% else %}
                                             <h4>-</h4>
                                         {% endif %}

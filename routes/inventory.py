@@ -616,10 +616,14 @@ def analytics():
     top_gainers = card_performances[:5]
     top_losers = card_performances[-5:]
     
+    # Find the most valuable card (highest current price in yen)
+    most_valuable_card = max(cards, key=lambda x: x.current_price_yen) if cards else None
+
     return render_template('inventory_analytics.html',
                          total_cards=total_cards,
                          total_purchase_value=total_purchase_value,
                          total_current_value=total_current_value,
                          category_breakdown=category_breakdown,
                          top_gainers=top_gainers,
-                         top_losers=top_losers)
+                         top_losers=top_losers,
+                         most_valuable_card=most_valuable_card)
