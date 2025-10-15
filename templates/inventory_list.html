@@ -216,14 +216,14 @@
                                 {% set individual_gain_loss_percentage = ((card.current_price_sgd - card.purchase_price_sgd) / card.purchase_price_sgd * 100) if card.purchase_price_sgd > 0 else 0 %}
                                 <tr>
                                     <td>
-                                        <a href="{{ url_for('inventory.view_card_details', card_id=card.id) }}" class="text-decoration-none">
+                                        <a href="{{ url_for('inventory.view_card_details', card_id=card.id) }}" class="text-decoration-none text-white">
                                             <strong>{{ card.name }}</strong>
                                         </a>
                                         {% if card.set_name %}
                                             <br><small class="text-muted">{{ card.set_name }}</small>
                                         {% endif %}
                                     </td>
-                                    <td><code>{{ card.card_number }}</code></td>
+                                    <td><code class="text-white">{{ card.card_number }}</code></td>
                                     <td>
                                         <span class="badge 
                                             {% if card.category == 'Mangas' %}bg-info
@@ -247,10 +247,10 @@
                                             {{ card.rarity }}
                                         </span>
                                     </td>
-                                    <td>{{ card.quantity }}</td>
-                                    <td>¥{{ "{:,.0f}".format(card.purchase_price_yen) }}</td>
-                                    <td>¥{{ "{:,.0f}".format(card.current_price_yen) }}</td>
-                                    <td>¥{{ "{:,.0f}".format(card.current_price_yen * card.quantity) }}</td>
+                                    <td class="text-white">{{ card.quantity }}</td>
+                                    <td class="text-white">¥{{ "{:,.0f}".format(card.purchase_price_yen) }}</td>
+                                    <td class="text-white">¥{{ "{:,.0f}".format(card.current_price_yen) }}</td>
+                                    <td class="text-white">¥{{ "{:,.0f}".format(card.current_price_yen * card.quantity) }}</td>
                                     <td>
                                         {% set individual_gain_loss_yen = (card.current_price_yen - card.purchase_price_yen) * card.quantity %}
                                         {% set individual_gain_loss_percentage_yen = ((card.current_price_yen - card.purchase_price_yen) / card.purchase_price_yen * 100) if card.purchase_price_yen > 0 else 0 %}
@@ -261,7 +261,7 @@
                                     </td>
                                     <td>
                                         {% if card.last_price_update %}
-                                            <small>{{ card.last_price_update.strftime('%m/%d %H:%M') }}</small>
+                                            <small class="text-white">{{ card.last_price_update.strftime('%m/%d %H:%M') }}</small>
                                         {% else %}
                                             <small class="text-muted">Never</small>
                                         {% endif %}
