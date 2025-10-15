@@ -70,9 +70,9 @@
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-striped">
+                                <table class="table table-striped table-dark">
                                     <thead>
-                                        <tr>
+                                        <tr class="text-light">
                                             <th>Category</th>
                                             <th>Cards</th>
                                             <th>Quantity</th>
@@ -84,7 +84,7 @@
                                     </thead>
                                     <tbody>
                                         {% for category, data in category_breakdown.items() %}
-                                        <tr>
+                                        <tr class="text-light">
                                             <td>
                                                 <span class="badge 
                                                     {% if category == 'Mangas' %}bg-info
@@ -98,10 +98,10 @@
                                                     {{ category }}
                                                 </span>
                                             </td>
-                                            <td>{{ data.cards }}</td>
-                                            <td>{{ data.total_quantity }}</td>
-                                            <td>¥{{ "{:,.0f}".format(data.purchase_value) }}</td>
-                                            <td>¥{{ "{:,.0f}".format(data.current_value) }}</td>
+                                            <td class="text-white">{{ data.cards }}</td>
+                                            <td class="text-white">{{ data.total_quantity }}</td>
+                                            <td class="text-white">¥{{ "{:,.0f}".format(data.purchase_value) }}</td>
+                                            <td class="text-white">¥{{ "{:,.0f}".format(data.current_value) }}</td>
                                             <td class="{% if data.gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
                                                 {% if data.gain_loss >= 0 %}+{% endif %}¥{{ "{:,.0f}".format(data.gain_loss) }}
                                             </td>
@@ -130,9 +130,9 @@
                         <div class="card-body">
                             {% if top_gainers %}
                                 <div class="table-responsive">
-                                    <table class="table table-sm">
+                                    <table class="table table-sm table-dark">
                                         <thead>
-                                            <tr>
+                                            <tr class="text-light">
                                                 <th>Card</th>
                                                 <th>Gain</th>
                                                 <th>%</th>
@@ -140,12 +140,12 @@
                                         </thead>
                                         <tbody>
                                             {% for performance in top_gainers %}
-                                            <tr>
+                                            <tr class="text-light">
                                                 <td>
-                                                    <a href="{{ url_for('inventory.view_card_details', card_id=performance.card.id) }}" class="text-decoration-none">
+                                                    <a href="{{ url_for('inventory.view_card_details', card_id=performance.card.id) }}" class="text-decoration-none text-white">
                                                         <strong>{{ performance.card.name }}</strong>
                                                     </a>
-                                                    <br><small class="text-muted">{{ performance.card.card_number }}</small>
+                                                    <br><small class="text-light">{{ performance.card.card_number }}</small>
                                                 </td>
                                                 <td class="text-success">
                                                     +¥{{ "{:,.0f}".format(performance.gain_loss) }}
@@ -159,7 +159,7 @@
                                     </table>
                                 </div>
                             {% else %}
-                                <p class="text-muted text-center">No performance data available</p>
+                                <p class="text-white text-center">No performance data available</p>
                             {% endif %}
                         </div>
                     </div>
@@ -176,9 +176,9 @@
                         <div class="card-body">
                             {% if top_losers %}
                                 <div class="table-responsive">
-                                    <table class="table table-sm">
+                                    <table class="table table-sm table-dark">
                                         <thead>
-                                            <tr>
+                                            <tr class="text-light">
                                                 <th>Card</th>
                                                 <th>Loss</th>
                                                 <th>%</th>
@@ -186,12 +186,12 @@
                                         </thead>
                                         <tbody>
                                             {% for performance in top_losers %}
-                                            <tr>
+                                            <tr class="text-light">
                                                 <td>
-                                                    <a href="{{ url_for('inventory.view_card_details', card_id=performance.card.id) }}" class="text-decoration-none">
+                                                    <a href="{{ url_for('inventory.view_card_details', card_id=performance.card.id) }}" class="text-decoration-none text-white">
                                                         <strong>{{ performance.card.name }}</strong>
                                                     </a>
-                                                    <br><small class="text-muted">{{ performance.card.card_number }}</small>
+                                                    <br><small class="text-light">{{ performance.card.card_number }}</small>
                                                 </td>
                                                 <td class="text-danger">
                                                     ¥{{ "{:,.0f}".format(performance.gain_loss) }}
@@ -205,7 +205,7 @@
                                     </table>
                                 </div>
                             {% else %}
-                                <p class="text-muted text-center">No performance data available</p>
+                                <p class="text-white text-center">No performance data available</p>
                             {% endif %}
                         </div>
                     </div>
@@ -223,16 +223,16 @@
                             <div class="row">
                                 <div class="col-md-4">
                                     <div class="text-center">
-                                        <h6 class="text-muted">Average Card Value</h6>
+                                        <h6 class="text-light">Average Card Value</h6>
                                         <h4>¥{{ "{:,.0f}".format(total_current_value / total_cards) if total_cards > 0 else 0 }}</h4>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="text-center">
-                                        <h6 class="text-muted">Most Valuable Card</h6>
+                                        <h6 class="text-light">Most Valuable Card</h6>
                                         {% if top_gainers %}
                                             <h4>¥{{ "{:,.0f}".format(top_gainers[0].card.current_price_yen) }}</h4>
-                                            <small class="text-muted">{{ top_gainers[0].card.name }}</small>
+                                            <small class="text-light">{{ top_gainers[0].card.name }}</small>
                                         {% else %}
                                             <h4>-</h4>
                                         {% endif %}
@@ -240,7 +240,7 @@
                                 </div>
                                 <div class="col-md-4">
                                     <div class="text-center">
-                                        <h6 class="text-muted">Portfolio ROI</h6>
+                                        <h6 class="text-light">Portfolio ROI</h6>
                                         <h4 class="{% if total_gain_loss_percentage >= 0 %}text-success{% else %}text-danger{% endif %}">
                                             {% if total_gain_loss_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(total_gain_loss_percentage) }}%
                                         </h4>

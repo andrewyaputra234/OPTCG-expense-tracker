@@ -49,8 +49,8 @@ def inventory_list():
     """Display all inventory cards with current values and trends"""
     # Get category filter and sorting from query parameters
     selected_category = request.args.get('category', 'All')
-    sort_by = request.args.get('sort_by', 'name')
-    sort_order = request.args.get('sort_order', 'asc')
+    sort_by = request.args.get('sort_by', 'current_price')  # Default to current price
+    sort_order = request.args.get('sort_order', 'desc')  # Default to highest first
     
     # Build base query
     query = InventoryCard.query
@@ -100,8 +100,8 @@ def inventory_list():
     elif sort_by == 'pnl':
         cards.sort(key=lambda card: (card.current_price_yen - card.purchase_price_yen) * card.quantity, reverse=(sort_order == 'desc'))
     
-    # Get all available categories for dropdown
-    all_categories = ['All', 'Mangas', 'SP', 'AA LDR', 'SEC', 'AA', 'SR', 'Regular']
+    # Get all available categories for dropdown (ordered by priority/value: highest to lowest)
+    all_categories = ['All', 'Mangas', 'SP', 'AA LDR', 'AA', 'SEC', 'SR', 'Regular']
     
     # Calculate totals in JPY (for filtered cards)
     total_purchase_value_yen = sum(card.purchase_price_yen * card.quantity for card in cards)
@@ -109,10 +109,19 @@ def inventory_list():
     total_gain_loss_yen = total_current_value_yen - total_purchase_value_yen
     total_gain_loss_percentage = (total_gain_loss_yen / total_purchase_value_yen * 100) if total_purchase_value_yen > 0 else 0
     
+    # Get category counts for better overview
+    all_cards = InventoryCard.query.all()
+    category_counts = {}
+    for category in ['Mangas', 'SP', 'AA LDR', 'AA', 'SEC', 'SR', 'Regular']:
+        count = len([card for card in all_cards if card.category == category])
+        if count > 0:
+            category_counts[category] = count
+    
     return render_template('inventory_list.html', 
                          cards=cards,
                          selected_category=selected_category,
                          all_categories=all_categories,
+                         category_counts=category_counts,
                          sort_by=sort_by,
                          sort_order=sort_order,
                          total_purchase_value_yen=total_purchase_value_yen,

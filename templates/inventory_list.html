@@ -36,18 +36,38 @@
                                     <i class="fas fa-filter"></i> Filter by Category:
                                 </label>
                                 <select name="category" id="category" class="form-select me-2" style="width: auto;" onchange="this.form.submit()">
-                                    {% for category in all_categories %}
-                                    <option value="{{ category }}" {% if category == selected_category %}selected{% endif %}>
-                                        {% if category == 'All' %}All Categories
-                                        {% elif category == 'SP' %}SP (Special Parallel)
-                                        {% elif category == 'AA LDR' %}AA LDR (Alternate Art Leaders)
-                                        {% elif category == 'SEC' %}SEC (Secret Rares)
-                                        {% elif category == 'AA' %}AA (Regular Alternate Arts)
-                                        {% elif category == 'SR' %}SR (Super Rares)
-                                        {% else %}{{ category }}
-                                        {% endif %}
-                                    </option>
-                                    {% endfor %}
+                                    <option value="All" {% if 'All' == selected_category %}selected{% endif %}>🔍 All Categories ({{ cards|length }} cards)</option>
+                                    
+                                    <optgroup label="💎 Premium Categories (Highest Value)">
+                                        <option value="Mangas" {% if 'Mangas' == selected_category %}selected{% endif %}>
+                                            📚 Mangas{% if category_counts.get('Mangas') %} ({{ category_counts['Mangas'] }}){% endif %}
+                                        </option>
+                                        <option value="SP" {% if 'SP' == selected_category %}selected{% endif %}>
+                                            ⭐ SP{% if category_counts.get('SP') %} ({{ category_counts['SP'] }}){% endif %}
+                                        </option>
+                                    </optgroup>
+                                    
+                                    <optgroup label="🎨 Alternate Arts">
+                                        <option value="AA LDR" {% if 'AA LDR' == selected_category %}selected{% endif %}>
+                                            👑 AA LDR{% if category_counts.get('AA LDR') %} ({{ category_counts['AA LDR'] }}){% endif %}
+                                        </option>
+                                        <option value="AA" {% if 'AA' == selected_category %}selected{% endif %}>
+                                            🎨 AA{% if category_counts.get('AA') %} ({{ category_counts['AA'] }}){% endif %}
+                                        </option>
+                                    </optgroup>
+                                    
+                                    <optgroup label="📦 Standard Rarities">
+                                        <option value="SEC" {% if 'SEC' == selected_category %}selected{% endif %}>
+                                            🔐 SEC{% if category_counts.get('SEC') %} ({{ category_counts['SEC'] }}){% endif %}
+                                        </option>
+                                        <option value="SR" {% if 'SR' == selected_category %}selected{% endif %}>
+                                            💫 SR{% if category_counts.get('SR') %} ({{ category_counts['SR'] }}){% endif %}
+                                        </option>
+                                        <option value="Regular" {% if 'Regular' == selected_category %}selected{% endif %}>
+                                            📄 Regular{% if category_counts.get('Regular') %} ({{ category_counts['Regular'] }}){% endif %}
+                                        </option>
+                                    </optgroup>
+                                </select>
                                 </select>
                                 <small class="text-muted">
                                     Showing {{ cards|length }} card(s) 
@@ -61,49 +81,64 @@
 
             <!-- Portfolio Summary -->
             <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">
+                <!-- Cards Count -->
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-primary text-white h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-2">
+                                <i class="fas fa-layer-group me-2"></i>
                                 {% if selected_category != 'All' %}{{ selected_category }} {% endif %}Cards
                             </h5>
-                            <h3>{{ cards|sum(attribute='quantity') }}</h3>
-                            <small>
+                            <h2 class="mb-1">{{ cards|sum(attribute='quantity') }}</h2>
+                            <small class="text-light">
                                 {% if selected_category != 'All' %}in {{ selected_category }}{% else %}total inventory{% endif %}
                             </small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card bg-info text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">Purchase Value</h5>
-                            {% set total_purchase_value_yen = cards|sum(attribute='purchase_price_yen') %}
-                            <h3>¥{{ "{:,.0f}".format(total_purchase_value_yen) }}</h3>
+                
+                <!-- Purchase Value -->
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-info text-white h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-2">
+                                <i class="fas fa-shopping-cart me-2"></i>
+                                Purchase Value
+                            </h5>
+                            <h2 class="mb-1">¥{{ "{:,.0f}".format(total_purchase_value_yen) }}</h2>
+                            <small class="text-light">Total invested</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card bg-secondary text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">Current Value</h5>
-                            {% set total_current_value_yen = cards|sum(attribute='current_price_yen') %}
-                            <h3>¥{{ "{:,.0f}".format(total_current_value_yen) }}</h3>
+                
+                <!-- Current Value -->
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card bg-secondary text-white h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-2">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Current Value
+                            </h5>
+                            <h2 class="mb-1">¥{{ "{:,.0f}".format(total_current_value_yen) }}</h2>
+                            <small class="text-light">Market value</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    {% set total_gain_loss_yen = total_current_value_yen - total_purchase_value_yen %}
-                    {% set total_gain_loss_percentage_yen = (total_gain_loss_yen / total_purchase_value_yen * 100) if total_purchase_value_yen > 0 else 0 %}
-                    <div class="card {% if total_gain_loss_yen >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">P&L</h5>
-                            <h3>
+                
+                <!-- P&L -->
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card {% if total_gain_loss_yen >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white h-100">
+                        <div class="card-body text-center">
+                            <h5 class="card-title mb-2">
+                                <i class="fas {% if total_gain_loss_yen >= 0 %}fa-arrow-up{% else %}fa-arrow-down{% endif %} me-2"></i>
+                                Profit & Loss
+                            </h5>
+                            <h2 class="mb-1">
                                 {% if total_gain_loss_yen >= 0 %}+{% endif %}¥{{ "{:,.0f}".format(total_gain_loss_yen) }}
-                                <small class="d-block">
-                                    ({% if total_gain_loss_percentage_yen >= 0 %}+{% endif %}{{ "%.1f"|format(total_gain_loss_percentage_yen) }}%)
-                                </small>
-                            </h3>
+                            </h2>
+                            <small class="text-light">
+                                ({% if total_gain_loss_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(total_gain_loss_percentage) }}%)
+                            </small>
                         </div>
                     </div>
                 </div>
