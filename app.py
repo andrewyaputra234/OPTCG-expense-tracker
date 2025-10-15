@@ -62,13 +62,17 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    # MODIFIED: Use absolute import and remove Expense
-    from models import db, Card, WishlistItem, Collection
+    # MODIFIED: Use absolute import and include new inventory models
+    from models import db, Card, WishlistItem, Collection, InventoryCard, PriceHistory
     db.init_app(app)
 
     with app.app_context():
         print(f"Creating database at: {app.config['SQLALCHEMY_DATABASE_URI']}")
         db.create_all()
+
+    # Register blueprints
+    from routes.inventory import inventory_bp
+    app.register_blueprint(inventory_bp, url_prefix='/inventory')
 
     @app.route('/')
     def index():

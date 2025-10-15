@@ -14,8 +14,58 @@
         <h1>Track Your Treasure, Master Your Collection.</h1>
         <p>The ultimate tool for every One Piece TCG enthusiast. Log expenses, monitor card values, and complete your collection.</p>
         <div class="cta-buttons">
-            <a href="{{ url_for('collections_list') }}" class="btn btn-primary">View Collections</a>
-            <a href="{{ url_for('add_card') }}" class="btn btn-secondary">Add a Card</a>
+            <a href="{{ url_for('inventory.inventory_list') }}" class="btn btn-primary">My Inventory</a>
+            <a href="{{ url_for('collections_list') }}" class="btn btn-secondary">View Collections</a>
+            <a href="{{ url_for('add_card') }}" class="btn btn-outline-primary">Add a Card</a>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-5 mb-5">
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="text-center mb-4">Features</h2>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                    <h5 class="card-title">Price Tracking</h5>
+                    <p class="card-text">Track your cards' daily price movements with live Yuyu-tei integration. See trends, gains, and losses over time.</p>
+                    <a href="{{ url_for('inventory.inventory_list') }}" class="btn btn-outline-primary">View Inventory</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-robot fa-3x text-success mb-3"></i>
+                    <h5 class="card-title">AI Recognition</h5>
+                    <p class="card-text">Simply upload card images and let AI automatically detect card details, numbers, and rarities.</p>
+                    <a href="{{ url_for('inventory.add_inventory_card') }}" class="btn btn-outline-success">Add with AI</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-collections fa-3x text-info mb-3"></i>
+                    <h5 class="card-title">Collections</h5>
+                    <p class="card-text">Organize your cards into collections for different purposes - sales, personal, or trading.</p>
+                    <a href="{{ url_for('collections_list') }}" class="btn btn-outline-info">Manage Collections</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="alert alert-info text-center">
+                <h5><i class="fas fa-lightbulb"></i> New Feature: Personal Inventory Tracking</h5>
+                <p class="mb-0">Now you can track your personal card collection separately from sales collections. Get daily price updates, view price trends, and analyze your portfolio performance!</p>
+            </div>
         </div>
     </div>
 </div>

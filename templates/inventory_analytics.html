@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory Analytics{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Inventory Analytics</h2>
+                <a href="{{ url_for('inventory.inventory_list') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Back to Inventory
+                </a>
+            </div>
+
+            <!-- Portfolio Overview -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Total Cards</h5>
+                            <h2>{{ total_cards }}</h2>
+                            <small>Unique cards in inventory</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Total Invested</h5>
+                            <h2>${{ "%.2f"|format(total_purchase_value) }}</h2>
+                            <small>Original purchase amount</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-secondary text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Current Value</h5>
+                            <h2>${{ "%.2f"|format(total_current_value) }}</h2>
+                            <small>Based on latest prices</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    {% set total_gain_loss = total_current_value - total_purchase_value %}
+                    {% set total_gain_loss_percentage = (total_gain_loss / total_purchase_value * 100) if total_purchase_value > 0 else 0 %}
+                    <div class="card {% if total_gain_loss >= 0 %}bg-success{% else %}bg-danger{% endif %} text-white">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">Total P&L</h5>
+                            <h2>
+                                {% if total_gain_loss >= 0 %}+{% endif %}${{ "%.2f"|format(total_gain_loss) }}
+                            </h2>
+                            <small>
+                                {% if total_gain_loss_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(total_gain_loss_percentage) }}%
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Top Gainers -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0 text-success">
+                                <i class="fas fa-arrow-up"></i> Top Performers
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if top_gainers %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Card</th>
+                                                <th>Gain</th>
+                                                <th>%</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for performance in top_gainers %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ url_for('inventory.view_card_details', card_id=performance.card.id) }}" class="text-decoration-none">
+                                                        <strong>{{ performance.card.name }}</strong>
+                                                    </a>
+                                                    <br><small class="text-muted">{{ performance.card.card_number }}</small>
+                                                </td>
+                                                <td class="text-success">
+                                                    +${{ "%.2f"|format(performance.gain_loss) }}
+                                                </td>
+                                                <td class="text-success">
+                                                    +{{ "%.1f"|format(performance.gain_loss_percentage) }}%
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <p class="text-muted text-center">No performance data available</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Losers -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0 text-danger">
+                                <i class="fas fa-arrow-down"></i> Underperformers
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            {% if top_losers %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Card</th>
+                                                <th>Loss</th>
+                                                <th>%</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for performance in top_losers %}
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ url_for('inventory.view_card_details', card_id=performance.card.id) }}" class="text-decoration-none">
+                                                        <strong>{{ performance.card.name }}</strong>
+                                                    </a>
+                                                    <br><small class="text-muted">{{ performance.card.card_number }}</small>
+                                                </td>
+                                                <td class="text-danger">
+                                                    ${{ "%.2f"|format(performance.gain_loss) }}
+                                                </td>
+                                                <td class="text-danger">
+                                                    {{ "%.1f"|format(performance.gain_loss_percentage) }}%
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <p class="text-muted text-center">No performance data available</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portfolio Composition -->
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Portfolio Insights</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <h6 class="text-muted">Average Card Value</h6>
+                                        <h4>${{ "%.2f"|format(total_current_value / total_cards) if total_cards > 0 else 0 }}</h4>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <h6 class="text-muted">Most Valuable Card</h6>
+                                        {% if top_gainers %}
+                                            <h4>${{ "%.2f"|format(top_gainers[0].card.current_price_sgd) }}</h4>
+                                            <small class="text-muted">{{ top_gainers[0].card.name }}</small>
+                                        {% else %}
+                                            <h4>-</h4>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="text-center">
+                                        <h6 class="text-muted">Portfolio ROI</h6>
+                                        <h4 class="{% if total_gain_loss_percentage >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                            {% if total_gain_loss_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(total_gain_loss_percentage) }}%
+                                        </h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="row mt-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <a href="{{ url_for('inventory.add_inventory_card') }}" class="btn btn-primary w-100">
+                                        <i class="fas fa-plus"></i><br>Add New Card
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <form method="POST" action="{{ url_for('inventory.update_all_prices') }}" class="w-100">
+                                        <button type="submit" class="btn btn-success w-100" onclick="return confirm('Update all card prices?')">
+                                            <i class="fas fa-sync-alt"></i><br>Update Prices
+                                        </button>
+                                    </form>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-info w-100" onclick="exportData()">
+                                        <i class="fas fa-download"></i><br>Export Data
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="{{ url_for('inventory.inventory_list') }}" class="btn btn-outline-primary w-100">
+                                        <i class="fas fa-list"></i><br>Full Inventory
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function exportData() {
+    // Simple export functionality - could be enhanced to generate CSV/Excel
+    alert('Export functionality coming soon! For now, you can manually copy the data from the inventory list.');
+}
+
+// Add some animations for the cards
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.5s, transform 0.5s';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ card.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Edit {{ card.name }}</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="card_number" class="form-label">Card Number</label>
+                                    <input type="text" class="form-control" id="card_number" 
+                                           value="{{ card.card_number }}" disabled>
+                                    <div class="form-text">Card number cannot be changed</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="quantity" class="form-label">Quantity</label>
+                                    <input type="number" class="form-control" id="quantity" name="quantity" 
+                                           value="{{ card.quantity }}" min="1" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="purchase_price_yen" class="form-label">Purchase Price (¥)</label>
+                                    <input type="number" class="form-control" id="purchase_price_yen" name="purchase_price_yen" 
+                                           step="0.01" min="0" value="{{ card.purchase_price_yen }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="purchase_price_sgd" class="form-label">Purchase Price (SGD)</label>
+                                    <input type="number" class="form-control" id="purchase_price_sgd" name="purchase_price_sgd" 
+                                           step="0.01" min="0" value="{{ card.purchase_price_sgd }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="current_price_yen" class="form-label">Current Price (¥)</label>
+                                    <input type="number" class="form-control" id="current_price_yen" name="current_price_yen" 
+                                           step="0.01" min="0" value="{{ card.current_price_yen }}">
+                                    <div class="form-text">Override automatic Yuyu-tei price</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="current_price_sgd" class="form-label">Current Price (SGD)</label>
+                                    <input type="number" class="form-control" id="current_price_sgd" name="current_price_sgd" 
+                                           step="0.01" min="0" value="{{ card.current_price_sgd }}">
+                                    <div class="form-text">Manual SGD price (enables SGD tracking)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="condition" class="form-label">Condition</label>
+                                    <select class="form-select" id="condition" name="condition">
+                                        <option value="Near Mint" {% if card.condition == 'Near Mint' %}selected{% endif %}>Near Mint (NM)</option>
+                                        <option value="Lightly Played" {% if card.condition == 'Lightly Played' %}selected{% endif %}>Lightly Played (LP)</option>
+                                        <option value="Moderately Played" {% if card.condition == 'Moderately Played' %}selected{% endif %}>Moderately Played (MP)</option>
+                                        <option value="Heavily Played" {% if card.condition == 'Heavily Played' %}selected{% endif %}>Heavily Played (HP)</option>
+                                        <option value="Damaged" {% if card.condition == 'Damaged' %}selected{% endif %}>Damaged (DMG)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="purchase_date" class="form-label">Purchase Date</label>
+                                    <input type="date" class="form-control" id="purchase_date" name="purchase_date" 
+                                           value="{{ card.purchase_date.strftime('%Y-%m-%d') }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3">{{ card.notes or '' }}</textarea>
+                        </div>
+
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">Current Market Information</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <p class="mb-1"><strong>Current Price (¥):</strong> ¥{{ card.current_price_yen|int }}</p>
+                                        <p class="mb-1"><strong>Current Price (SGD):</strong> ${{ "%.2f"|format(card.current_price_sgd) }}</p>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <p class="mb-1"><strong>Yen Updated:</strong> 
+                                            {% if card.last_price_update_yen %}
+                                                {{ card.last_price_update_yen.strftime('%b %d, %Y at %H:%M') }}
+                                            {% else %}
+                                                Never
+                                            {% endif %}
+                                        </p>
+                                        {% if card.track_sgd_trends and card.last_price_update_sgd %}
+                                        <p class="mb-1"><strong>SGD Updated:</strong> 
+                                            {{ card.last_price_update_sgd.strftime('%b %d, %Y at %H:%M') }}
+                                        </p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-4">
+                                        {% set individual_gain_loss = (card.current_price_sgd - card.purchase_price_sgd) * card.quantity %}
+                                        {% set individual_gain_loss_percentage = ((card.current_price_sgd - card.purchase_price_sgd) / card.purchase_price_sgd * 100) if card.purchase_price_sgd > 0 else 0 %}
+                                        <p class="mb-1"><strong>Current P&L:</strong> 
+                                            <span class="{% if individual_gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                {% if individual_gain_loss >= 0 %}+{% endif %}${{ "%.2f"|format(individual_gain_loss) }}
+                                                ({% if individual_gain_loss_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(individual_gain_loss_percentage) }}%)
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="alert alert-info mt-3">
+                                    <strong>Price Update Info:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li><strong>Yen:</strong> Updating will override automatic Yuyu-tei prices and mark as "manual" in price history</li>
+                                        <li><strong>SGD:</strong> Updating will enable SGD tracking and mark prices as "manual"</li>
+                                        <li><strong>History:</strong> Changes are automatically recorded in your price history</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('inventory.view_card_details', card_id=card.id) }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Auto-calculate SGD from Yen when exchange rate is available
+    const yenInput = document.getElementById('purchase_price_yen');
+    const sgdInput = document.getElementById('purchase_price_sgd');
+    const exchangeRate = 0.009; // Approximate JPY to SGD rate
+
+    yenInput.addEventListener('input', function() {
+        if (this.value) {
+            sgdInput.value = (parseFloat(this.value) * exchangeRate).toFixed(2);
+        }
+    });
+
+    sgdInput.addEventListener('input', function() {
+        if (this.value) {
+            yenInput.value = (parseFloat(this.value) / exchangeRate).toFixed(0);
+        }
+    });
+</script>
+{% endblock %}

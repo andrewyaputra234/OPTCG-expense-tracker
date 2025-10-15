@@ -23,6 +23,7 @@
                 <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Home</a>
                 <a href="{{ url_for('collections_list') }}" class="{% if request.endpoint in ['collections_list'] %}active{% endif %}">Collections</a>
                 <a href="{{ url_for('collection') }}" class="{% if request.endpoint in ['collection'] %}active{% endif %}">My Collection</a>
+                <a href="{{ url_for('inventory.inventory_list') }}" class="{% if request.endpoint.startswith('inventory.') %}active{% endif %}">My Inventory</a>
                 <a href="{{ url_for('add_card') }}" class="{% if request.endpoint == 'add_card' %}active{% endif %}">Add Card</a>
                 <a href="{{ url_for('add_card_with_ai') }}" class="{% if request.endpoint == 'add_card_with_ai' %}active{% endif %}">Add Card (AI)</a>
                 <a href="{{ url_for('wishlist') }}" class="{% if request.endpoint in ['wishlist','add_wishlist_item','edit_wishlist_item'] %}active{% endif %}">Wishlist</a>
