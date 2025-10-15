@@ -59,6 +59,65 @@
                 </div>
             </div>
 
+            <!-- Category Breakdown -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-chart-pie"></i> Portfolio by Category
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Category</th>
+                                            <th>Cards</th>
+                                            <th>Quantity</th>
+                                            <th>Purchase Value</th>
+                                            <th>Current Value</th>
+                                            <th>P&L</th>
+                                            <th>ROI %</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for category, data in category_breakdown.items() %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge 
+                                                    {% if category == 'Mangas' %}bg-info
+                                                    {% elif category == 'SP' %}bg-warning
+                                                    {% elif category == 'AA LDR' %}bg-danger
+                                                    {% elif category == 'SEC' %}bg-dark
+                                                    {% elif category == 'AA' %}bg-success
+                                                    {% elif category == 'SR' %}bg-primary
+                                                    {% else %}bg-secondary
+                                                    {% endif %}">
+                                                    {{ category }}
+                                                </span>
+                                            </td>
+                                            <td>{{ data.cards }}</td>
+                                            <td>{{ data.total_quantity }}</td>
+                                            <td>¥{{ "{:,.0f}".format(data.purchase_value) }}</td>
+                                            <td>¥{{ "{:,.0f}".format(data.current_value) }}</td>
+                                            <td class="{% if data.gain_loss >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                {% if data.gain_loss >= 0 %}+{% endif %}¥{{ "{:,.0f}".format(data.gain_loss) }}
+                                            </td>
+                                            <td class="{% if data.gain_loss_percentage >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                {% if data.gain_loss_percentage >= 0 %}+{% endif %}{{ "%.1f"|format(data.gain_loss_percentage) }}%
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row">
                 <!-- Top Gainers -->
                 <div class="col-md-6">

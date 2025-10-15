@@ -56,6 +56,23 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label for="category" class="form-label">Category</label>
+                                    <select class="form-select" id="category" name="category">
+                                        <option value="Regular" {% if card.category == 'Regular' %}selected{% endif %}>Regular</option>
+                                        <option value="Mangas" {% if card.category == 'Mangas' %}selected{% endif %}>Mangas</option>
+                                        <option value="SP" {% if card.category == 'SP' %}selected{% endif %}>SP (Special Parallel)</option>
+                                        <option value="AA LDR" {% if card.category == 'AA LDR' %}selected{% endif %}>AA LDR (Alternate Art Leaders)</option>
+                                        <option value="SEC" {% if card.category == 'SEC' %}selected{% endif %}>SEC (Secret Rares)</option>
+                                        <option value="AA" {% if card.category == 'AA' %}selected{% endif %}>AA (Regular Alternate Arts)</option>
+                                        <option value="SR" {% if card.category == 'SR' %}selected{% endif %}>SR (Super Rares)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
                                     <label for="purchase_date" class="form-label">Purchase Date</label>
                                     <input type="date" class="form-control" id="purchase_date" name="purchase_date" 
                                            value="{{ card.purchase_date.strftime('%Y-%m-%d') }}">

@@ -51,6 +51,7 @@ class InventoryCard(db.Model):
     
     # Additional info
     condition = db.Column(db.String(50), default='Near Mint')  # NM, LP, MP, HP, etc.
+    category = db.Column(db.String(50), default='Regular')  # Mangas, SP, AA LDR, SEC, AA, SR
     notes = db.Column(db.Text)
     image_url = db.Column(db.String(500))
     

@@ -13,9 +13,63 @@ JPY_TO_SGD_RATE = 0.0086  # More accurate JPY to SGD rate as of 2024/2025
 @inventory_bp.route('/')
 def inventory_list():
     """Display all inventory cards with current values and trends"""
-    cards = InventoryCard.query.order_by(InventoryCard.name).all()
+    # Get category filter and sorting from query parameters
+    selected_category = request.args.get('category', 'All')
+    sort_by = request.args.get('sort_by', 'name')
+    sort_order = request.args.get('sort_order', 'asc')
     
-    # Calculate totals in JPY
+    # Build base query
+    query = InventoryCard.query
+    
+    # Filter cards based on selected category
+    if selected_category != 'All':
+        query = query.filter_by(category=selected_category)
+    
+    # Apply sorting
+    if sort_by == 'name':
+        if sort_order == 'desc':
+            query = query.order_by(InventoryCard.name.desc())
+        else:
+            query = query.order_by(InventoryCard.name.asc())
+    elif sort_by == 'purchase_price':
+        if sort_order == 'desc':
+            query = query.order_by(InventoryCard.purchase_price_yen.desc())
+        else:
+            query = query.order_by(InventoryCard.purchase_price_yen.asc())
+    elif sort_by == 'current_price':
+        if sort_order == 'desc':
+            query = query.order_by(InventoryCard.current_price_yen.desc())
+        else:
+            query = query.order_by(InventoryCard.current_price_yen.asc())
+    elif sort_by == 'total_value':
+        # For total value, we'll sort by current_price_yen * quantity
+        # We'll sort in Python since SQLAlchemy might not handle complex expressions well
+        pass  # Handle this after query execution
+    elif sort_by == 'pnl':
+        # For P&L, we'll sort by (current_price_yen - purchase_price_yen) * quantity  
+        # We'll sort in Python since SQLAlchemy might not handle complex expressions well
+        pass  # Handle this after query execution
+    elif sort_by == 'last_updated':
+        if sort_order == 'desc':
+            query = query.order_by(InventoryCard.last_price_update.desc().nullslast())
+        else:
+            query = query.order_by(InventoryCard.last_price_update.asc().nullslast())
+    else:
+        # Default sorting by name
+        query = query.order_by(InventoryCard.name.asc())
+    
+    cards = query.all()
+    
+    # Handle sorting for calculated fields (total_value and pnl)
+    if sort_by == 'total_value':
+        cards.sort(key=lambda card: card.current_price_yen * card.quantity, reverse=(sort_order == 'desc'))
+    elif sort_by == 'pnl':
+        cards.sort(key=lambda card: (card.current_price_yen - card.purchase_price_yen) * card.quantity, reverse=(sort_order == 'desc'))
+    
+    # Get all available categories for dropdown
+    all_categories = ['All', 'Mangas', 'SP', 'AA LDR', 'SEC', 'AA', 'SR', 'Regular']
+    
+    # Calculate totals in JPY (for filtered cards)
     total_purchase_value_yen = sum(card.purchase_price_yen * card.quantity for card in cards)
     total_current_value_yen = sum(card.current_price_yen * card.quantity for card in cards)
     total_gain_loss_yen = total_current_value_yen - total_purchase_value_yen
@@ -23,6 +77,10 @@ def inventory_list():
     
     return render_template('inventory_list.html', 
                          cards=cards,
+                         selected_category=selected_category,
+                         all_categories=all_categories,
+                         sort_by=sort_by,
+                         sort_order=sort_order,
                          total_purchase_value_yen=total_purchase_value_yen,
                          total_current_value_yen=total_current_value_yen,
                          total_gain_loss_yen=total_gain_loss_yen,
@@ -37,6 +95,7 @@ def add_inventory_card():
         purchase_price_yen = float(request.form.get('purchase_price_yen', 0))
         purchase_price_sgd = float(request.form.get('purchase_price_sgd', 0))
         condition = request.form.get('condition', 'Near Mint')
+        category = request.form.get('category', 'Regular')
         notes = request.form.get('notes', '')
         
         try:
@@ -69,6 +128,7 @@ def add_inventory_card():
                     current_price_yen=current_price_yen,
                     current_price_sgd=current_price_sgd,
                     condition=condition,
+                    category=category,
                     notes=notes,
                     last_price_update=datetime.utcnow()
                 )
@@ -185,6 +245,17 @@ def add_inventory_card_with_ai():
                         purchase_price_yen = purchase_price_original
                         purchase_price_sgd = purchase_price_original * JPY_TO_SGD_RATE
                     
+                    # Auto-detect category based on rarity
+                    rarity = card_data.get('rarity', '')
+                    if rarity.upper() in ['SEC', 'SECRET']:
+                        category = 'SEC'
+                    elif rarity.upper() in ['SR', 'SUPER RARE']:
+                        category = 'SR'
+                    elif rarity.upper() in ['L', 'LEADER']:
+                        category = 'AA LDR'
+                    else:
+                        category = 'Regular'
+                    
                     # Create inventory card
                     new_card = InventoryCard(
                         name=card_data.get('name', 'Unknown Card'),
@@ -198,6 +269,7 @@ def add_inventory_card_with_ai():
                         current_price_yen=current_price_yen,
                         current_price_sgd=current_price_sgd,
                         condition='Near Mint',  # Default for AI-added cards
+                        category=category,
                         notes=f'Added via AI on {datetime.now().strftime("%Y-%m-%d")}',
                         image_url=card_data.get('image_url', ''),
                         last_price_update=datetime.utcnow()
@@ -368,6 +440,7 @@ def edit_inventory_card(card_id):
         card.purchase_price_yen = float(request.form.get('purchase_price_yen', card.purchase_price_yen))
         card.purchase_price_sgd = float(request.form.get('purchase_price_sgd', card.purchase_price_sgd))
         card.condition = request.form.get('condition', card.condition)
+        card.category = request.form.get('category', card.category)
         card.notes = request.form.get('notes', card.notes)
         
         try:
@@ -398,20 +471,41 @@ def delete_inventory_card(card_id):
 
 @inventory_bp.route('/analytics')
 def analytics():
-    """Show inventory analytics and trends"""
+    """Show inventory analytics and trends with category breakdown"""
     cards = InventoryCard.query.all()
     
-    # Calculate various metrics
+    # Calculate overall metrics (using JPY)
     total_cards = sum(card.quantity for card in cards)
-    total_purchase_value = sum(card.purchase_price_sgd * card.quantity for card in cards)
-    total_current_value = sum(card.current_price_sgd * card.quantity for card in cards)
+    total_purchase_value = sum(card.purchase_price_yen * card.quantity for card in cards)
+    total_current_value = sum(card.current_price_yen * card.quantity for card in cards)
+    
+    # Category breakdown
+    categories = ['Mangas', 'SP', 'AA LDR', 'SEC', 'AA', 'SR', 'Regular']
+    category_breakdown = {}
+    
+    for category in categories:
+        category_cards = [card for card in cards if card.category == category]
+        if category_cards:
+            cat_purchase_value = sum(card.purchase_price_yen * card.quantity for card in category_cards)
+            cat_current_value = sum(card.current_price_yen * card.quantity for card in category_cards)
+            cat_gain_loss = cat_current_value - cat_purchase_value
+            cat_gain_loss_pct = (cat_gain_loss / cat_purchase_value * 100) if cat_purchase_value > 0 else 0
+            
+            category_breakdown[category] = {
+                'cards': len(category_cards),
+                'total_quantity': sum(card.quantity for card in category_cards),
+                'purchase_value': cat_purchase_value,
+                'current_value': cat_current_value,
+                'gain_loss': cat_gain_loss,
+                'gain_loss_percentage': cat_gain_loss_pct
+            }
     
     # Top gainers and losers
     card_performances = []
     for card in cards:
-        if card.purchase_price_sgd > 0:
-            gain_loss = (card.current_price_sgd - card.purchase_price_sgd) * card.quantity
-            gain_loss_percentage = (card.current_price_sgd - card.purchase_price_sgd) / card.purchase_price_sgd * 100
+        if card.purchase_price_yen > 0:
+            gain_loss = (card.current_price_yen - card.purchase_price_yen) * card.quantity
+            gain_loss_percentage = (card.current_price_yen - card.purchase_price_yen) / card.purchase_price_yen * 100
             card_performances.append({
                 'card': card,
                 'gain_loss': gain_loss,
@@ -427,5 +521,6 @@ def analytics():
                          total_cards=total_cards,
                          total_purchase_value=total_purchase_value,
                          total_current_value=total_current_value,
+                         category_breakdown=category_breakdown,
                          top_gainers=top_gainers,
                          top_losers=top_losers)

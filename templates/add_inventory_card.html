@@ -57,6 +57,23 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label for="category" class="form-label">Category</label>
+                                    <select class="form-select" id="category" name="category">
+                                        <option value="Regular" selected>Regular</option>
+                                        <option value="Mangas">Mangas</option>
+                                        <option value="SP">SP (Special Parallel)</option>
+                                        <option value="AA LDR">AA LDR (Alternate Art Leaders)</option>
+                                        <option value="SEC">SEC (Secret Rares)</option>
+                                        <option value="AA">AA (Regular Alternate Arts)</option>
+                                        <option value="SR">SR (Super Rares)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="mb-3">
                                     <label for="purchase_date" class="form-label">Purchase Date</label>
                                     <input type="date" class="form-control" id="purchase_date" name="purchase_date" 
                                            value="{{ today_date }}">
