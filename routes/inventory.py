@@ -201,11 +201,20 @@ def inventory_list():
     
     cards = query.all()
     
+    # Get recently added card IDs from session for prioritizing at the top
+    newly_added_cards_ids = session.get('newly_added_cards', [])
+    
     # Handle sorting for calculated fields (total_value and pnl)
     if sort_by == 'total_value':
         cards.sort(key=lambda card: card.current_price_yen * card.quantity, reverse=(sort_order == 'desc'))
     elif sort_by == 'pnl':
         cards.sort(key=lambda card: (card.current_price_yen - card.purchase_price_yen) * card.quantity, reverse=(sort_order == 'desc'))
+    
+    # Always prioritize newly added cards at the top, regardless of sorting
+    if newly_added_cards_ids:
+        newly_added = [card for card in cards if card.id in newly_added_cards_ids]
+        other_cards = [card for card in cards if card.id not in newly_added_cards_ids]
+        cards = newly_added + other_cards
     
     # Get all available categories for dropdown (ordered by priority/value: highest to lowest)
     all_categories = ['All', 'Mangas', 'SP', 'AA LDR', 'AA', 'SEC', 'SR', 'Regular']
@@ -255,24 +264,25 @@ def inventory_list():
     
     # Sort sets by code (OP01, OP02, etc.) - sort by extracting numbers for proper ordering
     def sort_set_key(s):
-        if s.startswith('OP'):
-            return (1, int(s[2:]))
-        elif s.startswith('PRB'):
-            return (2, int(s[3:]))
-        elif s.startswith('ST'):
-            return (3, int(s[2:]))
-        elif s == 'P':
-            return (4, 0)
-        else:
+        try:
+            if s.startswith('OP') and len(s) > 2:
+                return (1, int(s[2:]))
+            elif s.startswith('PRB') and len(s) > 3:
+                return (2, int(s[3:]))
+            elif s.startswith('ST') and len(s) > 2:
+                return (3, int(s[2:]))
+            elif s == 'P':
+                return (4, 0)
+            else:
+                return (5, s)
+        except ValueError:
+            # If we can't parse the number, treat it as a generic set
             return (5, s)
     
     available_sets = ['All'] + sorted(list(all_possible_sets), key=sort_set_key)
     
-    # Get recently added card IDs from session for highlighting
-    newly_added_cards = session.get('newly_added_cards', [])
-    
     # Clear the newly added cards from session after showing them once
-    if newly_added_cards:
+    if newly_added_cards_ids:
         session.pop('newly_added_cards', None)
     
     return render_template('inventory_list.html', 
@@ -295,7 +305,7 @@ def inventory_list():
                          total_current_value_sgd=total_current_value_sgd,
                          total_gain_loss_sgd=total_gain_loss_sgd,
                          total_gain_loss_percentage_sgd=total_gain_loss_percentage_sgd,
-                         newly_added_cards=newly_added_cards,
+                         newly_added_cards=newly_added_cards_ids,
                          JPY_TO_SGD_RATE=JPY_TO_SGD_RATE)
 
 @inventory_bp.route('/add', methods=['GET', 'POST'])
@@ -310,14 +320,28 @@ def add_inventory_card():
         pricing_mode = request.form.get('pricing_mode', 'jpy')
         
         try:
+            print(f"DEBUG: Form data received - category: {category}, pricing_mode: {pricing_mode}")
+            print(f"DEBUG: Form keys: {list(request.form.keys())}")
+            
             if category == 'Miscellaneous' or pricing_mode == 'sgd':
                 # SGD Manual Entry Mode (for miscellaneous cards)
                 card_name = request.form.get('card_name', '').strip()
-                purchase_price_sgd = float(request.form.get('purchase_price_sgd', 0))
-                current_price_sgd = float(request.form.get('current_price_sgd', 0))
+                purchase_price_sgd_str = request.form.get('purchase_price_sgd', '0')
+                current_price_sgd_str = request.form.get('current_price_sgd', '0')
+                
+                print(f"DEBUG SGD Mode: card_name='{card_name}', purchase_price_sgd='{purchase_price_sgd_str}', current_price_sgd='{current_price_sgd_str}'")
                 
                 if not card_name:
                     flash('Card name is required for miscellaneous cards.', 'error')
+                    print("DEBUG: Card name validation failed")
+                    return render_template('add_inventory_card.html')
+                
+                try:
+                    purchase_price_sgd = float(purchase_price_sgd_str)
+                    current_price_sgd = float(current_price_sgd_str)
+                except ValueError as e:
+                    flash(f'Invalid price format: {str(e)}', 'error')
+                    print(f"DEBUG: Price conversion failed: {e}")
                     return render_template('add_inventory_card.html')
                 
                 # Create card without Yuyu-tei lookup
@@ -357,10 +381,20 @@ def add_inventory_card():
             else:
                 # JPY + Yuyu-tei Mode (existing functionality)
                 card_number = request.form.get('card_number', '').strip()
-                purchase_price_yen = float(request.form.get('purchase_price_yen', 0))
+                purchase_price_yen_str = request.form.get('purchase_price_yen', '0')
+                
+                print(f"DEBUG JPY Mode: card_number='{card_number}', purchase_price_yen='{purchase_price_yen_str}'")
                 
                 if not card_number:
                     flash('Card number is required for Yuyu-tei cards.', 'error')
+                    print("DEBUG: Card number validation failed")
+                    return render_template('add_inventory_card.html')
+                
+                try:
+                    purchase_price_yen = float(purchase_price_yen_str)
+                except ValueError as e:
+                    flash(f'Invalid purchase price format: {str(e)}', 'error')
+                    print(f"DEBUG: Purchase price conversion failed: {e}")
                     return render_template('add_inventory_card.html')
                 
                 # Fetch current market price from Yuyu-tei (get all variants)
@@ -447,6 +481,10 @@ def add_inventory_card():
                 
         except Exception as e:
             db.session.rollback()
+            print(f"DEBUG: Exception occurred: {str(e)}")
+            print(f"DEBUG: Exception type: {type(e)}")
+            import traceback
+            traceback.print_exc()
             flash(f'Error adding card: {str(e)}', 'error')
     
     return render_template('add_inventory_card.html')
