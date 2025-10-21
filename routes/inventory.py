@@ -804,6 +804,108 @@ def update_all_prices():
     
     return redirect(url_for('inventory.inventory_list'))
 
+@inventory_bp.route('/update_prices_fast', methods=['POST'])
+def update_all_prices_fast():
+    """Update prices for all inventory cards using fast wrapper (same logic, faster execution)"""
+    import time
+    from fast_chatbot_service import FastYuyuteiPricer
+    
+    cards = InventoryCard.query.all()
+    updated_count = 0
+    start_time = time.time()
+    
+    # Use the fast wrapper that reuses browser
+    with FastYuyuteiPricer() as fast_pricer:
+        for card in cards:
+            try:
+                # Skip miscellaneous cards (manual pricing only)
+                if card.category == 'Miscellaneous':
+                    continue
+                    
+                # Skip cards with manual price override
+                if card.is_manual_override:
+                    print(f"Skipping {card.card_number}: {card.name} (Manual price override active)")
+                    continue
+                
+                # Normalize card number for scraping (removes PRB prefix)  
+                normalized_card_number = normalize_card_number_for_scraping(card.card_number)
+                
+                # Use FAST version - same logic, persistent browser
+                price_data = fast_pricer.get_yuyutei_prices_by_card_number_fast(normalized_card_number)
+                
+                if price_data and len(price_data) > 0:
+                    # Filter for reasonable prices - higher upper limit for Manga-type cards
+                    if card.category in ['Mangas', 'Event Mangas']:
+                        # Manga cards can be very expensive (up to ¥1,000,000)
+                        valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 1000000]
+                        print(f"  Manga-type card: Using extended price range (¥50 - ¥1,000,000)")
+                    else:
+                        # Regular cards use standard price range
+                        valid_prices = [p for p in price_data if 50 <= p.get('price_yen', 0) <= 50000]
+                    
+                    if valid_prices:
+                        # Priority order for highest price selection:
+                        # 1. Mangas & Event Mangas (ALWAYS highest price - top priority)
+                        # 2. SP (second highest value) 
+                        # 3. Others use first result
+                        if card.category in ['Mangas', 'Event Mangas']:
+                            # Manga-type cards ALWAYS get the absolute highest price
+                            selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                            current_price_yen = selected_card.get('price_yen', 0)
+                            print(f"Manga-type card detected - using HIGHEST price: ¥{current_price_yen:,}")
+                        elif card.category == 'SP':
+                            # SP cards get highest price
+                            selected_card = max(valid_prices, key=lambda x: x.get('price_yen', 0))
+                            current_price_yen = selected_card.get('price_yen', 0)
+                        else:
+                            current_price_yen = valid_prices[0].get('price_yen', 0)
+                    else:
+                        current_price_yen = 0
+                        
+                    current_price_sgd = current_price_yen * JPY_TO_SGD_RATE
+                    
+                    # Update card's current price
+                    card.current_price_yen = current_price_yen
+                    card.current_price_sgd = current_price_sgd
+                    card.last_price_update = datetime.utcnow()
+                    
+                    # Add to price history (only if it's a different day or significantly different price)
+                    latest_history = PriceHistory.query.filter_by(
+                        inventory_card_id=card.id,
+                        date_recorded=date.today()
+                    ).first()
+                    
+                    if not latest_history:
+                        # No entry for today, create one
+                        price_entry = PriceHistory(
+                            inventory_card_id=card.id,
+                            price_yen=current_price_yen,
+                            price_sgd=current_price_sgd,
+                            jpy_to_sgd_rate=JPY_TO_SGD_RATE
+                        )
+                        db.session.add(price_entry)
+                    else:
+                        # Update today's entry
+                        latest_history.price_yen = current_price_yen
+                        latest_history.price_sgd = current_price_sgd
+                    
+                    updated_count += 1
+                    
+            except Exception as e:
+                print(f"Error updating price for card {card.card_number}: {e}")
+                continue
+    
+    try:
+        db.session.commit()
+        elapsed_time = time.time() - start_time
+        avg_time = elapsed_time / len(cards) if cards else 0
+        flash(f'🚀 Fast update completed in {elapsed_time:.1f}s! Updated {updated_count} cards (avg: {avg_time:.1f}s/card)', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating prices: {str(e)}', 'error')
+    
+    return redirect(url_for('inventory.inventory_list'))
+
 @inventory_bp.route('/card/<int:card_id>/price_data')
 def get_card_price_data(card_id):
     """API endpoint to get price history data for charts"""
