@@ -463,6 +463,12 @@
                                             <a href="{{ url_for('inventory.edit_inventory_card', card_id=card.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit Card">
                                                 <i class="fas fa-edit"></i>
                                             </a>
+                                            <form method="POST" action="{{ url_for('inventory.reset_individual_purchase_price', card_id=card.id) }}" class="d-inline" 
+                                                  onsubmit="return confirm('Reset purchase price for this card to current market price? This will update your profit/loss calculation.')">
+                                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Reset Purchase Price to Current Price">
+                                                    <i class="fas fa-redo-alt"></i>
+                                                </button>
+                                            </form>
                                             <form method="POST" action="{{ url_for('inventory.delete_inventory_card', card_id=card.id) }}" class="d-inline" 
                                                   onsubmit="return confirm('Are you sure you want to delete {{ card.name }}?')">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Card">

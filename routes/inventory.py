@@ -906,6 +906,72 @@ def update_all_prices_fast():
     
     return redirect(url_for('inventory.inventory_list'))
 
+@inventory_bp.route('/reset_purchase_prices', methods=['POST'])
+def reset_purchase_prices():
+    """Reset all purchase prices to current market prices (resets profit/loss to zero)"""
+    cards = InventoryCard.query.all()
+    updated_count = 0
+    
+    try:
+        for card in cards:
+            # Skip cards with no current price data
+            if card.current_price_yen <= 0:
+                continue
+            
+            # Update purchase prices to match current prices
+            old_purchase_yen = card.purchase_price_yen
+            old_purchase_sgd = card.purchase_price_sgd
+            
+            card.purchase_price_yen = card.current_price_yen
+            card.purchase_price_sgd = card.current_price_sgd
+            
+            # This effectively resets profit/loss to zero for this card
+            updated_count += 1
+            
+            print(f"Reset {card.card_number}: Purchase ¥{old_purchase_yen:,.0f} → ¥{card.current_price_yen:,.0f}")
+        
+        db.session.commit()
+        flash(f'✅ Reset purchase prices for {updated_count} cards to current market value! Profit/loss calculations now start from current prices.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error resetting purchase prices: {str(e)}', 'error')
+    
+    return redirect(url_for('inventory.inventory_list'))
+
+@inventory_bp.route('/card/<int:card_id>/reset_purchase_price', methods=['POST'])
+def reset_individual_purchase_price(card_id):
+    """Reset purchase price for a single card to current market price"""
+    card = InventoryCard.query.get_or_404(card_id)
+    
+    try:
+        # Check if card has current price data
+        if card.current_price_yen <= 0:
+            flash(f'Cannot reset purchase price for {card.name} - no current market price available.', 'warning')
+            return redirect(url_for('inventory.inventory_list'))
+        
+        # Store old values for logging
+        old_purchase_yen = card.purchase_price_yen
+        old_purchase_sgd = card.purchase_price_sgd
+        
+        # Update purchase prices to match current prices
+        card.purchase_price_yen = card.current_price_yen
+        card.purchase_price_sgd = card.current_price_sgd
+        
+        db.session.commit()
+        
+        # Calculate the change
+        change_yen = card.current_price_yen - old_purchase_yen
+        change_sgd = card.current_price_sgd - old_purchase_sgd
+        
+        flash(f'✅ Reset purchase price for {card.name} ({card.card_number}): ¥{old_purchase_yen:,.0f} → ¥{card.current_price_yen:,.0f} (Change: ¥{change_yen:+,.0f})', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error resetting purchase price for {card.name}: {str(e)}', 'error')
+    
+    return redirect(url_for('inventory.inventory_list'))
+
 @inventory_bp.route('/card/<int:card_id>/price_data')
 def get_card_price_data(card_id):
     """API endpoint to get price history data for charts"""
