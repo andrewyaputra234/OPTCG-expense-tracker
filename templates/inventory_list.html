@@ -359,7 +359,7 @@
                                 {% for card in cards %}
                                 {% set individual_gain_loss = (card.current_price_sgd - card.purchase_price_sgd) * card.quantity %}
                                 {% set individual_gain_loss_percentage = ((card.current_price_sgd - card.purchase_price_sgd) / card.purchase_price_sgd * 100) if card.purchase_price_sgd > 0 else 0 %}
-                                <tr class="{% if card.id in newly_added_cards %}newly-added-card{% endif %}">
+                                <tr class="{% if card.id in newly_added_cards %}newly-added-card{% endif %}" data-card-id="{{ card.id }}">
                                     <td>
                                         <a href="{{ url_for('inventory.view_card_details', card_id=card.id) }}" class="text-decoration-none text-white">
                                             <strong>{{ card.name }}</strong>
@@ -411,9 +411,9 @@
                                     <td class="text-white">{{ card.quantity }}</td>
                                     <td class="text-white">
                                         <!-- JPY Display (default) -->
-                                        <span class="currency-jpy">¥{{ "{:,.0f}".format(card.purchase_price_yen) }}</span>
+                                        <span class="currency-jpy purchase-price-yen">¥{{ "{:,.0f}".format(card.purchase_price_yen) }}</span>
                                         <!-- SGD Display (hidden by default) -->
-                                        <span class="currency-sgd" style="display: none;">S${{ "{:,.2f}".format(card.purchase_price_sgd) }}</span>
+                                        <span class="currency-sgd purchase-price-sgd" style="display: none;">S${{ "{:,.2f}".format(card.purchase_price_sgd) }}</span>
                                     </td>
                                     <td class="text-white">
                                         <!-- JPY Display (default) -->
@@ -436,14 +436,14 @@
                                         <!-- JPY P&L (default) -->
                                         {% set individual_gain_loss_yen = (card.current_price_yen - card.purchase_price_yen) * card.quantity %}
                                         {% set individual_gain_loss_percentage_yen = ((card.current_price_yen - card.purchase_price_yen) / card.purchase_price_yen * 100) if card.purchase_price_yen > 0 else 0 %}
-                                        <span class="{% if individual_gain_loss_yen >= 0 %}text-success{% else %}text-danger{% endif %} currency-jpy">
+                                        <span class="{% if individual_gain_loss_yen >= 0 %}text-success{% else %}text-danger{% endif %} currency-jpy profit-loss-yen">
                                             {% if individual_gain_loss_yen >= 0 %}+{% endif %}¥{{ "{:,.0f}".format(individual_gain_loss_yen) }}
                                             <br><small>({% if individual_gain_loss_percentage_yen >= 0 %}+{% endif %}{{ "%.1f"|format(individual_gain_loss_percentage_yen) }}%)</small>
                                         </span>
                                         <!-- SGD P&L (hidden by default) -->
                                         {% set individual_gain_loss_sgd = (card.current_price_sgd - card.purchase_price_sgd) * card.quantity %}
                                         {% set individual_gain_loss_percentage_sgd = ((card.current_price_sgd - card.purchase_price_sgd) / card.purchase_price_sgd * 100) if card.purchase_price_sgd > 0 else 0 %}
-                                        <span class="{% if individual_gain_loss_sgd >= 0 %}text-success{% else %}text-danger{% endif %} currency-sgd" style="display: none;">
+                                        <span class="{% if individual_gain_loss_sgd >= 0 %}text-success{% else %}text-danger{% endif %} currency-sgd profit-loss-sgd" style="display: none;">
                                             {% if individual_gain_loss_sgd >= 0 %}+{% endif %}S${{ "{:,.2f}".format(individual_gain_loss_sgd) }}
                                             <br><small>({% if individual_gain_loss_percentage_sgd >= 0 %}+{% endif %}{{ "%.1f"|format(individual_gain_loss_percentage_sgd) }}%)</small>
                                         </span>
@@ -463,12 +463,12 @@
                                             <a href="{{ url_for('inventory.edit_inventory_card', card_id=card.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit Card">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <form method="POST" action="{{ url_for('inventory.reset_individual_purchase_price', card_id=card.id) }}" class="d-inline" 
-                                                  onsubmit="return confirm('Reset purchase price for this card to current market price? This will update your profit/loss calculation.')">
-                                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Reset Purchase Price to Current Price">
-                                                    <i class="fas fa-redo-alt"></i>
-                                                </button>
-                                            </form>
+                                            <button type="button" class="btn btn-sm btn-outline-warning reset-price-btn" 
+                                                    data-card-id="{{ card.id }}" 
+                                                    data-card-name="{{ card.name }}"
+                                                    title="Reset Purchase Price to Current Price">
+                                                <i class="fas fa-redo-alt"></i>
+                                            </button>
                                             <form method="POST" action="{{ url_for('inventory.delete_inventory_card', card_id=card.id) }}" class="d-inline" 
                                                   onsubmit="return confirm('Are you sure you want to delete {{ card.name }}?')">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Card">
@@ -568,6 +568,118 @@
         
         // Navigate to new URL
         window.location.search = urlParams.toString();
+    }
+
+    // Reset Purchase Price AJAX functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.reset-price-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const cardId = this.getAttribute('data-card-id');
+                const cardName = this.getAttribute('data-card-name');
+                
+                if (!confirm(`Reset purchase price for ${cardName} to current market price? This will update your profit/loss calculation.`)) {
+                    return;
+                }
+                
+                // Disable button and show loading
+                const originalIcon = this.innerHTML;
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                fetch(`/inventory/card/${cardId}/reset_purchase_price`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Show success message
+                        showAlert(data.message, 'success');
+                        
+                        // Update the row data without page refresh
+                        updateCardRow(cardId, data.updated_card);
+                    } else {
+                        showAlert(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('An error occurred while resetting the purchase price.', 'error');
+                })
+                .finally(() => {
+                    // Re-enable button
+                    this.disabled = false;
+                    this.innerHTML = originalIcon;
+                });
+            });
+        });
+    });
+
+    // Helper function to show alerts
+    function showAlert(message, type) {
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        const alertHtml = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        // Find flash messages container or create one
+        let container = document.querySelector('.flash-messages');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'flash-messages';
+            const mainContent = document.querySelector('.container-fluid');
+            mainContent.insertBefore(container, mainContent.firstChild);
+        }
+        
+        container.insertAdjacentHTML('beforeend', alertHtml);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            const alert = container.querySelector('.alert:last-child');
+            if (alert) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+
+    // Helper function to update card row data
+    function updateCardRow(cardId, updatedCard) {
+        const row = document.querySelector(`tr[data-card-id="${cardId}"]`);
+        if (!row) return;
+        
+        // Update purchase price cells
+        const purchasePriceYenCell = row.querySelector('.purchase-price-yen');
+        const purchasePriceSgdCell = row.querySelector('.purchase-price-sgd');
+        const profitLossYenCell = row.querySelector('.profit-loss-yen');
+        const profitLossSgdCell = row.querySelector('.profit-loss-sgd');
+        
+        if (purchasePriceYenCell) {
+            purchasePriceYenCell.textContent = `¥${updatedCard.purchase_price_yen.toLocaleString()}`;
+        }
+        if (purchasePriceSgdCell) {
+            purchasePriceSgdCell.textContent = `S$${updatedCard.purchase_price_sgd.toFixed(2)}`;
+        }
+        if (profitLossYenCell) {
+            const profitLossYen = updatedCard.profit_loss_yen;
+            profitLossYenCell.textContent = `¥${profitLossYen >= 0 ? '+' : ''}${profitLossYen.toLocaleString()}`;
+            profitLossYenCell.className = profitLossYen >= 0 ? 'text-success' : 'text-danger';
+        }
+        if (profitLossSgdCell) {
+            const profitLossSgd = updatedCard.profit_loss_sgd;
+            profitLossSgdCell.textContent = `S$${profitLossSgd >= 0 ? '+' : ''}${profitLossSgd.toFixed(2)}`;
+            profitLossSgdCell.className = profitLossSgd >= 0 ? 'text-success' : 'text-danger';
+        }
+        
+        // Add a brief highlight effect
+        row.style.backgroundColor = '#d4edda';
+        setTimeout(() => {
+            row.style.backgroundColor = '';
+        }, 2000);
     }
 </script>
 

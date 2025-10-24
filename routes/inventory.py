@@ -947,8 +947,10 @@ def reset_individual_purchase_price(card_id):
     try:
         # Check if card has current price data
         if card.current_price_yen <= 0:
-            flash(f'Cannot reset purchase price for {card.name} - no current market price available.', 'warning')
-            return redirect(url_for('inventory.inventory_list'))
+            return jsonify({
+                'success': False, 
+                'message': f'Cannot reset purchase price for {card.name} - no current market price available.'
+            }), 400
         
         # Store old values for logging
         old_purchase_yen = card.purchase_price_yen
@@ -964,13 +966,24 @@ def reset_individual_purchase_price(card_id):
         change_yen = card.current_price_yen - old_purchase_yen
         change_sgd = card.current_price_sgd - old_purchase_sgd
         
-        flash(f'✅ Reset purchase price for {card.name} ({card.card_number}): ¥{old_purchase_yen:,.0f} → ¥{card.current_price_yen:,.0f} (Change: ¥{change_yen:+,.0f})', 'success')
+        return jsonify({
+            'success': True,
+            'message': f'✅ Reset purchase price for {card.name} ({card.card_number}): ¥{old_purchase_yen:,.0f} → ¥{card.current_price_yen:,.0f} (Change: ¥{change_yen:+,.0f})',
+            'updated_card': {
+                'id': card.id,
+                'purchase_price_yen': card.purchase_price_yen,
+                'purchase_price_sgd': card.purchase_price_sgd,
+                'profit_loss_yen': card.current_price_yen - card.purchase_price_yen,
+                'profit_loss_sgd': card.current_price_sgd - card.purchase_price_sgd
+            }
+        })
         
     except Exception as e:
         db.session.rollback()
-        flash(f'Error resetting purchase price for {card.name}: {str(e)}', 'error')
-    
-    return redirect(url_for('inventory.inventory_list'))
+        return jsonify({
+            'success': False,
+            'message': f'Error resetting purchase price for {card.name}: {str(e)}'
+        }), 500
 
 @inventory_bp.route('/card/<int:card_id>/price_data')
 def get_card_price_data(card_id):
