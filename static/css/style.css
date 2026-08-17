@@ -401,12 +401,16 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 8px;
     box-shadow: 0 0 5px var(--border-color), 0 4px 8px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    margin-bottom: 1rem; /* Re-added margin to create space between rows */
 }
 
 .collection-table tr:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0 15px var(--border-color), 0 8px 16px rgba(0, 0, 0, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 0 12px var(--border-color), 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Use a subtle top border between rows instead of margin to avoid table layout issues */
+.collection-table tbody tr + tr td {
+    border-top: 1px solid rgba(255,255,255,0.03);
 }
 
 .collection-table td:first-child {

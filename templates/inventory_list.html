@@ -25,6 +25,9 @@
                             <i class="fas fa-sync-alt"></i> Regular Update
                         </button>
                     </form>
+                    <button id="reset-visible-btn" class="btn btn-outline-warning me-2" title="Reset visible purchase prices to current market price">
+                        <i class="fas fa-undo"></i> Reset Visible
+                    </button>
                     <a href="{{ url_for('inventory.analytics') }}" class="btn btn-info">
                         <i class="fas fa-chart-line"></i> Analytics
                     </a>
@@ -615,6 +618,63 @@
                 });
             });
         });
+
+        // Bulk reset visible rows
+        const resetVisibleBtn = document.getElementById('reset-visible-btn');
+        if (resetVisibleBtn) {
+            resetVisibleBtn.addEventListener('click', function() {
+                if (!confirm('Reset purchase price for all visible cards to current market price?')) return;
+
+                // Collect visible card IDs
+                const rows = document.querySelectorAll('tbody tr[data-card-id]');
+                const cardIds = Array.from(rows).map(r => parseInt(r.getAttribute('data-card-id'))).filter(Boolean);
+                if (!cardIds.length) {
+                    showAlert('No visible cards found to reset.', 'error');
+                    return;
+                }
+
+                // Disable button while running
+                resetVisibleBtn.disabled = true;
+                const originalText = resetVisibleBtn.innerHTML;
+                resetVisibleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+                fetch('{{ url_for("inventory.reset_purchase_prices") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ card_ids: cardIds })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                        if (Array.isArray(data.updated_cards)) {
+                            data.updated_cards.forEach(u => {
+                                // Reuse updateCardRow to update DOM
+                                updateCardRow(u.id, {
+                                    purchase_price_yen: u.purchase_price_yen,
+                                    purchase_price_sgd: u.purchase_price_sgd,
+                                    profit_loss_yen: u.profit_loss_yen,
+                                    profit_loss_sgd: u.profit_loss_sgd
+                                });
+                            });
+                        }
+                    } else {
+                        showAlert(data.message || 'Error performing bulk reset.', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showAlert('An error occurred while resetting purchase prices.', 'error');
+                })
+                .finally(() => {
+                    resetVisibleBtn.disabled = false;
+                    resetVisibleBtn.innerHTML = originalText;
+                });
+            });
+        }
     });
 
     // Helper function to show alerts

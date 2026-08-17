@@ -909,34 +909,68 @@ def update_all_prices_fast():
 @inventory_bp.route('/reset_purchase_prices', methods=['POST'])
 def reset_purchase_prices():
     """Reset all purchase prices to current market prices (resets profit/loss to zero)"""
-    cards = InventoryCard.query.all()
-    updated_count = 0
-    
+    # Accept optional JSON payload with specific card IDs to reset. If not provided, reset all cards.
+    data = None
+    try:
+        if request.is_json:
+            data = request.get_json()
+    except Exception:
+        data = None
+
+    card_ids = None
+    if data and isinstance(data, dict):
+        card_ids = data.get('card_ids')
+
+    if card_ids and isinstance(card_ids, list):
+        cards = InventoryCard.query.filter(InventoryCard.id.in_(card_ids)).all()
+    else:
+        cards = InventoryCard.query.all()
+
+    updated_cards = []
+
     try:
         for card in cards:
             # Skip cards with no current price data
             if card.current_price_yen <= 0:
                 continue
-            
-            # Update purchase prices to match current prices
+
+            # Store old values for response/logging
             old_purchase_yen = card.purchase_price_yen
             old_purchase_sgd = card.purchase_price_sgd
-            
+
+            # Update purchase prices to match current prices
             card.purchase_price_yen = card.current_price_yen
             card.purchase_price_sgd = card.current_price_sgd
-            
-            # This effectively resets profit/loss to zero for this card
-            updated_count += 1
-            
+
+            # Prepare updated card payload for JSON response
+            updated_cards.append({
+                'id': card.id,
+                'purchase_price_yen': card.purchase_price_yen,
+                'purchase_price_sgd': card.purchase_price_sgd,
+                'profit_loss_yen': card.current_price_yen - card.purchase_price_yen,
+                'profit_loss_sgd': card.current_price_sgd - card.purchase_price_sgd
+            })
+
             print(f"Reset {card.card_number}: Purchase ¥{old_purchase_yen:,.0f} → ¥{card.current_price_yen:,.0f}")
-        
+
         db.session.commit()
-        flash(f'✅ Reset purchase prices for {updated_count} cards to current market value! Profit/loss calculations now start from current prices.', 'success')
-        
+
+        # If caller expects JSON, return details so the page can be updated without reload
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': True,
+                'message': f'Reset purchase prices for {len(updated_cards)} cards.',
+                'updated_cards': updated_cards
+            })
+
+        flash(f'✅ Reset purchase prices for {len(updated_cards)} cards to current market value! Profit/loss calculations now start from current prices.', 'success')
+
     except Exception as e:
         db.session.rollback()
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': str(e)}), 500
         flash(f'Error resetting purchase prices: {str(e)}', 'error')
-    
+
     return redirect(url_for('inventory.inventory_list'))
 
 @inventory_bp.route('/card/<int:card_id>/reset_purchase_price', methods=['POST'])

@@ -48,32 +48,34 @@
                 <div class="d-flex justify-content-end mb-3" style="gap: 10px;">
                     <a class="btn btn-primary btn-sm" href="{{ url_for('add_card', collection_id=collection.id) }}">Add Card</a>
                     <a class="btn btn-primary btn-sm" href="{{ url_for('add_card_with_ai', collection_id=collection.id) }}">Add with AI</a>
+                    <button id="reset-collection-visible-btn" class="btn btn-outline-warning btn-sm">Reset Visible</button>
                 </div>
                 {% endif %}
                 
                 {% if cards %}
+                <div class="table-responsive">
                 <table class="collection-table" id="cardTable">
                     <thead>
                         <tr>
-                            <th scope="col" style="width: 25%;">Name</th>
-                            <th scope="col" style="width: 15%;">Set Name</th>
-                            <th scope="col" style="width: 10%;">Card No.</th>
-                            <th scope="col" style="width: 10%;">Rarity</th>
+                            <th scope="col" style="width: 24%;">Name</th>
+                            <th scope="col" style="width: 10%;">Set Name</th>
+                            <th scope="col" style="width: 6%;">Card No.</th>
+                            <th scope="col" style="width: 6%;">Rarity</th>
                             <th scope="col" style="width: 5%;">Color</th>
-                            <th scope="col" style="width: 5%;">Qty</th>
+                            <th scope="col" style="width: 4%;">Qty</th>
                             <th scope="col" style="width: 10%;">Total (Org)</th>
                             <th scope="col" style="width: 10%;">Per Unit (¥)</th>
                             <th scope="col" style="width: 5%;">Live Price</th>
-                            <th scope="col" id="sortPriceSgd" style="width: 10%;">
+                            <th scope="col" id="sortPriceSgd" style="width: 8%;">
                                 Total (SGD) <span id="sortIcon"></span>
                             </th>
-                            <th scope="col" style="width: 10%;">Date</th>
-                            <th scope="col" style="width: 10%;">Actions</th>
+                            <th scope="col" style="width: 6%;">Date</th>
+                            <th scope="col" style="width: 6%;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for card in cards %}
-                        <tr>
+                        <tr data-card-id="{{ card.id }}">
                             <td>{{ card.name }}</td>
                             <td>{{ card.set_name }}</td>
                             <td>{{ card.card_number.replace(card.set_name + '-', '') }}</td>
@@ -115,6 +117,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                </div>
                 
                 <div class="text-end mt-4 p-3 border-top border-2">
                     <h4 class="mb-0">
@@ -170,6 +173,63 @@
                 window.location.href = selectedUrl;
             }
         });
+
+        // Bulk reset for visible collection rows
+        const resetBtn = document.getElementById('reset-collection-visible-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function() {
+                if (!confirm('Reset purchase price for all visible cards in this collection to current market price?')) return;
+
+                const rows = document.querySelectorAll('tbody tr[data-card-id]');
+                const cardIds = Array.from(rows).map(r => parseInt(r.getAttribute('data-card-id'))).filter(Boolean);
+                if (!cardIds.length) {
+                    alert('No visible cards found.');
+                    return;
+                }
+
+                resetBtn.disabled = true;
+                const originalText = resetBtn.innerHTML;
+                resetBtn.innerHTML = 'Processing...';
+
+                fetch('{{ url_for("inventory.reset_purchase_prices") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ card_ids: cardIds })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && Array.isArray(data.updated_cards)) {
+                        data.updated_cards.forEach(u => {
+                            const row = document.querySelector(`tr[data-card-id="${u.id}"]`);
+                            if (!row) return;
+                            const totalCell = row.querySelector('.total-price-sgd-cell');
+                            if (totalCell) {
+                                totalCell.textContent = `$${(u.purchase_price_sgd * 1).toFixed(2)}`;
+                            }
+                            const dateCell = row.querySelector('td:nth-last-child(2)');
+                            if (dateCell) {
+                                const d = new Date();
+                                dateCell.textContent = d.toISOString().slice(0,10);
+                            }
+                        });
+                        alert(data.message || 'Reset completed.');
+                    } else {
+                        alert(data.message || 'Error resetting prices.');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert('Error during reset.');
+                })
+                .finally(() => {
+                    resetBtn.disabled = false;
+                    resetBtn.innerHTML = originalText;
+                });
+            });
+        }
     });
 </script>
 {% endblock %}
